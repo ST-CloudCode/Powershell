@@ -1,0 +1,41 @@
+###Steps to Deploy an Azure Container Instance Using PowerShell
+## Replace Naming Conventions to applicable settings.
+1. Install the Azure PowerShell Module
+If you haven’t installed the Azure PowerShell module, do so by running:
+Install-Module -Name Az -AllowClobber -Force
+2. Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+3. Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+4. Create or Select a Resource Group
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+# Create a new resource group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+5. Define Container Instance Variables
+Set up the variables for your container instance:
+$containerGroupName = "myContainerGroup"
+$containerName = "myContainer"
+$imageName = "nginx"  # Example container image
+$containerPort = 80
+$cpuCores = 1
+$memoryInGB = 1
+6. Deploy the Azure Container Instance
+Use the New-AzContainerGroup cmdlet to create and deploy the container:
+New-AzContainerGroup -ResourceGroupName $resourceGroupName `
+                      -Name $containerGroupName `
+                      -Location $location `
+                      -Container $containerName `
+                      -Image $imageName `
+                      -Cpu $cpuCores `
+                      -Memory $memoryInGB `
+                      -Port $containerPort
+This command will create a container group with a single container running the specified image.
+
+7. Verify the Deployment
+You can check the status of your container instance with:
+Get-AzContainerGroup -ResourceGroupName $resourceGroupName -Name $containerGroupName
