@@ -1,0 +1,145 @@
+# Microsoft Entra ID Management Lab
+# Replace File Directories, Computers, and Users to applicable setting.
+## Exercise 1: Managing users and groups in Microsoft Entra ID
+
+### Task 1: Connect to Microsoft Entra ID
+
+1. **Upgrade PowerShell:**
+   - Ensure PowerShell is 5.1 or later.
+   - Set script execution policy:
+     ```powershell
+     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+     ```
+
+2. **Install Microsoft Graph PowerShell SDK:**
+   ```powershell
+   Install-Module Microsoft.Graph -Scope CurrentUser
+3. Verify Installation:
+Get-InstalledModule Microsoft.Graph
+4. Connect to Microsoft Graph:
+Connect-MgGraph -Scopes "User.ReadWrite.All", "Application.ReadWrite.All", "Sites.ReadWrite.All", "Directory.ReadWrite.All", "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+5. Sign In:
+Use Global Administrator credentials.
+6. Review Users:
+Get-MgUser
+
+### Task 2: Create a New Administrative User
+1. Retrieve Verified Domain:
+$verifiedDomain = (Get-MgOrganization).VerifiedDomains[0].Name
+2. Create Password Profile:
+$PasswordProfile = @{  
+"Password"="<password>";  
+"ForceChangePasswordNextSignIn"=$true  
+}
+3. Create User:
+New-MgUser -DisplayName "Noreen Riggs" -UserPrincipalName "Noreen@$verifiedDomain" -AccountEnabled -PasswordProfile $PasswordProfile -MailNickName "Noreen"
+4. Reference User and Role:
+$user = Get-MgUser -UserId "Noreen@$verifiedDomain"
+$role = Get-MgDirectoryRole | Where {$_.displayName -eq 'Global Administrator'}
+5. Assign Global Administrator Role:
+$OdataId = "https://graph.microsoft.com/v1.0/directoryObjects/" + $user.id  
+New-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.id -OdataId $OdataId    
+6. Verify Role Assignment:
+Get-MgDirectoryRoleMember -DirectoryRoleId $role.id
+
+### Task 3: Create and License a New User
+1. Create User:
+New-MgUser -DisplayName "Allan Yoo" -UserPrincipalName Allan@$verifiedDomain -AccountEnabled -PasswordProfile $PasswordProfile -MailNickName "Allan"
+2. Set Location Property:
+Update-MgUser -UserId Allan@$verifiedDomain -UsageLocation US
+3. Review Available Licenses:
+Get-MgSubscribedSku | FL
+4. Store SKU ID:
+$SkuId = (Get-MgSubscribedSku | Where-Object { $_.SkuPartNumber -eq "ENTERPRISEPREMIUM" }).SkuId
+5. Create and Assign License:
+$License = New-Object -TypeName PSCustomObject -Property @{
+DisabledPlans = @()
+SkuId = $SkuId
+}
+
+$LicensesToAssign = @($License)  
+Set-MgUserLicense -UserId Allan@$verifiedDomain -AddLicenses @{SkuId = $SkuId} -RemoveLicenses @()
+
+###Task 4: Create and Populate a Group
+1. Review Existing Groups:
+Get-MgGroup
+2. Create Security Group:
+New-MgGroup -DisplayName "Sales Security Group" -MailEnabled:$False  -MailNickName "SalesSecurityGroup" -SecurityEnabled
+3. Reference Group and User:
+$group = Get-MgGroup -ConsistencyLevel eventual -Count groupCount -Search '"DisplayName:Sales Security"'
+$user = Get-MgUser -UserId Allan@$verifiedDomain
+4. Add User to Group:
+New-MgGroupMember -GroupId $group.id -DirectoryObjectId $user.id
+5. Verify Group Membership:
+Get-MgGroupMember -GroupId $group.id
+
+##Exercise 2: Managing Exchange Online
+
+### Task 1: Connect to Exchange Online
+1. Install Module:
+Install-Module ExchangeOnlineManagement -force
+2. Connect to Exchange Online:
+Connect-ExchangeOnline
+3. Review Mailboxes:
+Get-EXOMailbox
+
+### Task 2: Create a Room Mailbox
+1. Create Room Mailbox:
+New-Mailbox -Room -Name BoardRoom
+2. Configure Room Mailbox:
+Set-CalendarProcessing BoardRoom -AutomateProcessing AutoAccept
+
+### Task 3: Verify Room Resource Booking
+1. Test Room Booking:
+Sign in to Outlook as Allan Yoo.
+Create and send a meeting request for BoardRoom.
+2. Verify Response:
+Check for meeting request acceptance.
+
+## Exercise 3: Managing SharePoint Online
+
+### Task 1: Connect to SharePoint Online
+1. Install Module:
+Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Scope CurrentUser
+2. Connect to SharePoint Online:
+$verifiedDomainShort = $verifiedDomain.Split(".")[0]
+Connect-SPOService -Url "https://$verifiedDomainShort-admin.sharepoint.com"
+3. List SharePoint Sites:
+Get-SPOSite
+
+### Task 2: Create a New Site
+1. Review Templates:
+Get-SPOWebTemplate
+2. Create Site:
+New-SPOSite -Url https://$verifiedDomainShort.sharepoint.com/sites/Sales -Owner noreen@$verifiedDomain -StorageQuota 256 -Template EHS#1 -NoWait
+3. Check Site Status (Optional):
+Get-SPOSite | FL Url,Status
+4. Disconnect from SharePoint:
+Disconnect-SPOService
+
+##Exercise 4: Managing Microsoft Teams
+
+###Task 1: Connect to Microsoft Teams
+1. Install Module:
+Install-Module -Name MicrosoftTeams -Force -AllowClobber
+2. Connect to Teams:
+Connect-MicrosoftTeams
+3. Verify Existing Teams:
+Get-Team
+
+###Task 2: Create a New Team
+1. Create Team:
+New-Team -DisplayName "Sales Team" -MailNickName "SalesTeam"
+2. Retrieve Team Information:
+$team = Get-Team -DisplayName "Sales Team"
+$team | FL
+3. Add User to Team:
+Add-TeamUser -GroupId $team.GroupId -User Allan@$verifiedDomain -Role Member
+4. Review Team Users:
+Get-TeamUser -GroupId $team.GroupId
+
+### Task 3: Verify Access to the Team
+1. Test Access:
+Sign in to Microsoft Teams as Allan Yoo.
+Verify that Sales Team is listed.
+Post a new conversation.
