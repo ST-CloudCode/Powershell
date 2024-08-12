@@ -1,0 +1,99 @@
+# Using PSProviders and PSDrives with PowerShell
+
+## Exercise 1: Creating Files and Folders on a Remote Computer
+
+### Task 1: Create a New Folder on a Remote Computer
+1. Open PowerShell as Administrator on `AZ-040T00A-LON-CL1`.
+2. Review help for the `New-Item` cmdlet:
+    ```powershell
+    Get-Help New-Item –ShowWindow
+    ```
+    *Note:* Review the `–Name` and `–ItemType` parameters, and close the `New-Item` Help window.
+3. Create a new folder named `ScriptShare` in `\\Lon-Svr1\C$`:
+    ```powershell
+    New-Item –Path \\Lon-Svr1\C$\ –Name ScriptShare –ItemType Directory
+    ```
+
+### Task 2: Create a New PSDrive Mapping to the Remote File Folder
+1. Display help for the `New-PSDrive` cmdlet:
+    ```powershell
+    Get-Help New-PSDrive –ShowWindow
+    ```
+    *Note:* Review the `–Name`, `–Root`, and `–PSProvider` parameters and example commands, then close the `New-PSDrive` Help window.
+2. Create a new PSDrive mapping:
+    ```powershell
+    New-PSDrive –Name ScriptShare –Root \\Lon-Svr1\c$\ScriptShare –PSProvider FileSystem
+    ```
+
+### Task 3: Create a File on the Mapped Drive
+1. Review help for the `Set-Location` cmdlet:
+    ```powershell
+    Get-Help Set-Location –ShowWindow
+    ```
+    *Note:* Close the `Set-Location` Help window.
+2. Change to the `ScriptShare:` location:
+    ```powershell
+    Set-Location ScriptShare:
+    ```
+3. Create a new file named `script.txt`:
+    ```powershell
+    New-Item script.txt
+    ```
+4. List the directory contents:
+    ```powershell
+    Get-ChildItem
+    ```
+    *Verify that `script.txt` is listed.*
+
+## Exercise 2: Creating a Registry Key for Your Future Scripts
+
+### Task 1: Create the Registry Key to Store Script Configurations
+1. Review the contents of the Software registry key:
+    ```powershell
+    Get-ChildItem -Path HKCU:\Software
+    ```
+2. Create a new registry key named `Scripts`:
+    ```powershell
+    New-Item –Path HKCU:\Software –Name Scripts
+    ```
+
+### Task 2: Create a New Registry Value to Store the Name of the PSDrive
+1. Change location to `HKCU:\Software\Scripts`:
+    ```powershell
+    Set-Location HKCU:\Software\Scripts
+    ```
+2. Create a registry value named `PSDriveName`:
+    ```powershell
+    New-ItemProperty -Path HKCU:\Software\Scripts -Name "PSDriveName" –Value "ScriptShare"
+    ```
+3. Review the `PSDriveName` registry value:
+    ```powershell
+    Get-ItemProperty . -Name PSDriveName
+    ```
+
+## Exercise 3: Creating a New Active Directory Group
+
+### Task 1: Create a PSDrive that Maps to the Users Container in AD DS
+1. Load the Active Directory module:
+    ```powershell
+    Import-Module ActiveDirectory
+    ```
+2. Create a new `AdatumUsers` PSDrive:
+    ```powershell
+    New-PSDrive -Name AdatumUsers -Root "CN=Users,DC=Adatum,DC=com" -PSProvider ActiveDirectory
+    ```
+3. Change location to the `AdatumUsers` drive:
+    ```powershell
+    Set-Location AdatumUsers:
+    ```
+
+### Task 2: Create the London Developers Group
+1. Create the `London Developers` group:
+    ```powershell
+    New-Item -ItemType group -Path . -Name "CN=London Developers"
+    ```
+2. List items in the current drive:
+    ```powershell
+    Get-ChildItem
+    ```
+    *Verify that the `London Developers` group is listed.*
