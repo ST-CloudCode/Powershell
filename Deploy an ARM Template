@@ -1,0 +1,60 @@
+##Steps to Deploy an ARM Template Using PowerShell
+1. Install the Azure PowerShell Module
+First, ensure you have the Azure PowerShell module installed. Open PowerShell as an administrator and run:
+Install-Module -Name Az -AllowClobber -Force
+2. Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+3. Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+4. Create or Select a Resource Group
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+# Create a new resource group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+5. Prepare the ARM Template
+Ensure you have an ARM template file (e.g., template.json) and optionally a parameters file (e.g., parameters.json). You can create these files as needed or download sample templates from Azure documentation.
+
+6. Deploy the ARM Template
+Use the New-AzResourceGroupDeployment cmdlet to deploy the ARM template:
+
+$templateFile = "path/to/template.json"
+$parametersFile = "path/to/parameters.json"  # Optional, remove if not used
+
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
+If you don't have a parameters file, you can pass parameters directly:
+
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -param1 "value1" `
+                               -param2 "value2"
+
+# Deploy-ARMTemplate.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$templateFile = "path/to/template.json"
+$parametersFile = "path/to/parameters.json"  # Optional
+
+# Create Resource Group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Deploy ARM Template
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
