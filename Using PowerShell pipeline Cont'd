@@ -1,0 +1,106 @@
+# Using PowerShell Pipeline
+
+## Exercise 1: Enumerating Objects
+
+### Task 1: Display a List of Files on Drive E
+1. Open PowerShell as Administrator.
+2. Display a list of files on drive E:
+    ```powershell
+    Get-ChildItem -Path E: -Recurse
+    ```
+3. Show the properties and methods of the items:
+    ```powershell
+    Get-ChildItem -Path E: -Recurse | Get-Member
+    ```
+    *Note:* Notice the `GetFiles` method in the list under `TypeName: System.IO.DirectoryInfo`.
+4. Enumerate files using `ForEach`:
+    ```powershell
+    Get-ChildItem -Path E: -Recurse | ForEach { $_.GetFiles() }
+    ```
+
+### Task 2: Use Enumeration to Produce 100 Random Numbers
+1. Find help for random number generation:
+    ```powershell
+    help *random*
+    ```
+    *Note:* Notice the `Get-Random` command.
+2. Display the help for `Get-Random`:
+    ```powershell
+    help Get-Random –ShowWindow
+    ```
+    *Note:* Notice the `-SetSeed` parameter.
+3. Close the `Get-Random` Help window.
+4. Generate numbers from 1 to 100:
+    ```powershell
+    1..100
+    ```
+5. Produce 100 random numbers using a seed:
+    ```powershell
+    1..100 | ForEach { Get-Random –SetSeed $_ }
+    ```
+
+### Task 3: Run a Method of a Windows Management Instrumentation (WMI) Object
+1. Ensure only PowerShell is running, then get WMI object for the operating system:
+    ```powershell
+    Get-WmiObject –Class Win32_OperatingSystem -EnableAllPrivileges
+    ```
+2. Display the properties and methods of the WMI object:
+    ```powershell
+    Get-WmiObject –Class Win32_OperatingSystem -EnableAllPrivileges | Get-Member
+    ```
+    *Note:* Notice the `Reboot` method.
+3. Reboot the machine (caution: this will restart your system):
+    ```powershell
+    Get-WmiObject –Class Win32_OperatingSystem -EnableAllPrivileges | ForEach { $_.Reboot() }
+    ```
+
+### Exercise 1 Results
+After completing this exercise, you should have created commands that manipulate multiple objects in the pipeline.
+
+## Exercise 2: Converting Objects
+
+### Task 1: Update Active Directory User Information
+> **Note:** Long commands might wrap on your screen but should be entered as a single line.
+
+1. Sign in to the system as `Adatum\Administrator` with the password `Pa55w.rd`.
+2. Open PowerShell as Administrator.
+3. Display Active Directory users in IT department from London:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Select-Object -Property Name,Department,City | Sort-Object Name
+    ```
+4. Update the office location for users:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Set-ADUser -Office 'LON-A/1000'
+    ```
+5. Verify the update:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City,Office | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Select-Object -Property Name,Department,City,Office | Sort-Object Name
+    ```
+
+### Task 2: Generate Files Listing Active Directory Users in the IT Department
+1. View the help for converting to HTML:
+    ```powershell
+    help ConvertTo-Html –ShowWindow
+    ```
+    *Note:* Close the `ConvertTo-Html` Help window.
+2. Generate an HTML report:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City,Office | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Sort-Object Name | Select-Object -Property Name,Department,City,Office | ConvertTo-Html –Property Name,Department,City -PreContent 'Users' | Out-File E:\UserReport.html
+    ```
+3. Open the HTML file in a browser:
+    ```powershell
+    Invoke-Expression E:\UserReport.html
+    ```
+4. Export the data to XML:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City,Office | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Sort-Object Name | Select-Object -Property Name,Department,City,Office | Export-Clixml E:\UserReport.xml
+    ```
+5. Export the data to CSV:
+    ```powershell
+    Get-ADUser -Filter * -Properties Department,City,Office | Where-Object {$_.Department -eq 'IT' -and $_.City -eq 'London'} | Sort-Object Name | Select-Object -Property Name,Department,City,Office | Export-Csv E:\UserReport.csv
+    ```
+6. Review the CSV file in Notepad:
+    *Open File Explorer, navigate to E:\, right-click `UserReport.csv`, select "Open with", and choose Notepad.*
+
+### Exercise 2 Results
+After completing this exercise, you should have queried Active Directory users, updated their information, and converted user objects to various data formats.
