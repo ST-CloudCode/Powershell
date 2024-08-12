@@ -1,0 +1,166 @@
+## Steps to Implement Data Protection on Azure Using PowerShell
+### Task 1: Use a Template to Provision Infrastructure
+Install the Azure PowerShell Modu
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+Create or Select a Resource Group
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+# Create a new resource group if needed
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+Deploy Infrastructure Using ARM Template
+
+Deploy an ARM template to provision the necessary infrastructure:
+$templateFile = "path/to/template.json"  # Path to your ARM template file
+$parametersFile = "path/to/parameters.json"  # Path to your ARM parameters file (optional)
+
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
+### Task 2: Create and Configure a Recovery Services Vault
+Create a Recovery Services Vault
+
+Create a new Recovery Services vault:
+$vaultName = "myRecoveryServicesVault"
+
+New-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName `
+                            -Name $vaultName `
+                            -Location $location
+Configure the Recovery Services Vault
+
+Set the context for the Recovery Services vault:
+$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
+Set-AzRecoveryServicesVaultContext -Vault $vault
+
+### Task 3: Configure Azure Virtual Machine-Level Backup
+Configure Backup for a Virtual Machine
+
+Define the VM and backup policy:
+$vmName = "myVM"
+$backupPolicyName = "DefaultPolicy"
+
+# Get the VM
+$vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName
+
+# Get or create a backup policy
+$policy = Get-AzRecoveryServicesBackupProtectionPolicy -Name $backupPolicyName -VaultId $vault.ID
+
+if (-not $policy) {
+    $policy = New-AzRecoveryServicesBackupProtectionPolicy -Name $backupPolicyName -VaultId $vault.ID -WorkloadType AzureVM
+}
+
+# Enable backup
+Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $resourceGroupName `
+                                          -VaultId $vault.ID `
+                                          -Item $vm.Id `
+                                          -Policy $policy.Id
+### Task 4: Monitor Azure Backup
+Monitor Backup Jobs
+
+You can check the status of backup jobs:
+Get-AzRecoveryServicesBackupJob -VaultId $vault.ID | Where-Object { $_.Status -eq 'InProgress' }
+
+To get detailed information about a specific job:
+$jobId = "<job-id>"
+Get-AzRecoveryServicesBackupJob -VaultId $vault.ID -JobId $jobId
+
+### Task 5: Enable Virtual Machine Replication
+Enable Replication for a Virtual Machine
+To enable Azure Site Recovery for VM replication:
+$asrVaultName = "myASRVault"
+$asrResourceGroupName = "myASRResourceGroup"
+$replicationPolicyName = "DefaultReplicationPolicy"
+
+# Create a Recovery Services Vault for Site Recovery
+$asrVault = New-AzRecoveryServicesVault -ResourceGroupName $asrResourceGroupName `
+                                         -Name $asrVaultName `
+                                         -Location $location `
+                                         -Sku "Standard"
+
+# Set the context for the ASR Vault
+Set-AzRecoveryServicesVaultContext -Vault $asrVault
+
+# Create a replication policy
+$replicationPolicy = New-AzRecoveryServicesReplicationPolicy -VaultId $asrVault.ID `
+                                                             -Name $replicationPolicyName `
+                                                             -ReplicationFrequencyInMinutes 15 `
+                                                             -RetentionDays 30 `
+                                                             -RetentionRate 60
+
+# Enable replication
+Enable-AzRecoveryServicesReplication -ResourceGroupName $resourceGroupName `
+                                      -VaultId $asrVault.ID `
+                                      -Item $vm.Id `
+                                      -PolicyId $replicationPolicy.ID
+
+# Setup-DataProtection.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$templateFile = "path/to/template.json"
+$parametersFile = "path/to/parameters.json"  # Optional
+$vaultName = "myRecoveryServicesVault"
+$vmName = "myVM"
+$backupPolicyName = "DefaultPolicy"
+$asrVaultName = "myASRVault"
+$asrResourceGroupName = "myASRResourceGroup"
+$replicationPolicyName = "DefaultReplicationPolicy"
+
+# Task 1: Deploy Infrastructure Using ARM Template
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
+
+# Task 2: Create and Configure Recovery Services Vault
+New-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName `
+                            -Name $vaultName `
+                            -Location $location
+$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
+Set-AzRecoveryServicesVaultContext -Vault $vault
+
+# Task 3: Configure VM-Level Backup
+$vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName
+$policy = Get-AzRecoveryServicesBackupProtectionPolicy -Name $backupPolicyName -VaultId $vault.ID
+if (-not $policy) {
+    $policy = New-AzRecoveryServicesBackupProtectionPolicy -Name $backupPolicyName -VaultId $vault.ID -WorkloadType AzureVM
+}
+Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $resourceGroupName `
+                                          -VaultId $vault.ID `
+                                          -Item $vm.Id `
+                                          -Policy $policy.Id
+
+# Task 4: Monitor Azure Backup
+Get-AzRecoveryServicesBackupJob -VaultId $vault.ID | Where-Object { $_.Status -eq 'InProgress' }
+
+# Task 5: Enable VM Replication
+$asrVault = New-AzRecoveryServicesVault -ResourceGroupName $asrResourceGroupName `
+                                         -Name $asrVaultName `
+                                         -Location $location `
+                                         -Sku "Standard"
+Set-AzRecoveryServicesVaultContext -Vault $asrVault
+$replicationPolicy = New-AzRecoveryServicesReplicationPolicy -VaultId $asrVault.ID `
+                                                              -Name $replicationPolicyName `
+                                                              -ReplicationFrequencyInMinutes 15 `
+                                                              -RetentionDays 30 `
+                                                              -RetentionRate 60
+Enable-AzRecoveryServicesReplication -ResourceGroupName $resourceGroupName `
+                                      -VaultId $asrVault.ID `
+                                      -Item $vm.Id `
+                                      -PolicyId $replicationPolicy.ID
