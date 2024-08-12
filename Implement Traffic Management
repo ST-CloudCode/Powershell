@@ -1,0 +1,154 @@
+##Steps to Implement Traffic Management on Azure Using PowerShell
+###Task 1: Use a Template to Provision Infrastructure
+Install the Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+Create or Select a Resource Group
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+# Create a new resource group if needed
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+Deploy Infrastructure Using ARM Template
+$templateFile = "path/to/template.json"  # Path to your ARM template file
+$parametersFile = "path/to/parameters.json"  # Path to your ARM parameters file (optional)
+
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
+Task 2: Configure an Azure Load Balancer
+Create a Public IP Address
+
+Create a public IP address for the load balancer:
+$publicIpName = "myPublicIP"
+
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName `
+                       -Name $publicIpName `
+                       -Location $location `
+                       -AllocationMethod Static
+
+Create a load balancer:
+$loadBalancerName = "myLoadBalancer"
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+
+New-AzLoadBalancer -ResourceGroupName $resourceGroupName `
+                    -Name $loadBalancerName `
+                    -Location $location `
+                    -FrontendIpConfiguration `
+                       -Name "myFrontEnd" `
+                       -PublicIpAddressId $publicIp.Id `
+                    -BackendAddressPool `
+                       -Name "myBackEnd" `
+                    -LoadBalancingRule `
+                       -Name "myLoadBalancingRule" `
+                       -FrontendIpConfigurationId (Get-AzLoadBalancerFrontendIpConfig -ResourceGroupName $resourceGroupName -LoadBalancerName $loadBalancerName -Name "myFrontEnd").Id `
+                       -BackendAddressPoolId (Get-AzLoadBalancerBackendAddressPool -ResourceGroupName $resourceGroupName -LoadBalancerName $loadBalancerName -Name "myBackEnd").Id `
+                       -Protocol Tcp `
+                       -FrontendPort 80 `
+                       -BackendPort 80
+
+Create a health probe for the load balancer:
+$probeName = "myHealthProbe"
+
+New-AzLoadBalancerProbe -ResourceGroupName $resourceGroupName `
+                         -LoadBalancerName $loadBalancerName `
+                         -Name $probeName `
+                         -Port 80 `
+                         -Protocol Tcp `
+                         -IntervalInSeconds 15 `
+                         -ProbeCount 2
+
+Associate the health probe with the load balancing rule:
+Set-AzLoadBalancerRule -ResourceGroupName $resourceGroupName `
+                        -LoadBalancerName $loadBalancerName `
+                        -Name "myLoadBalancingRule" `
+                        -ProbeId (Get-AzLoadBalancerProbe -ResourceGroupName $resourceGroupName -LoadBalancerName $loadBalancerName -Name $probeName).Id
+Task 3: Configure an Azure Application Gateway
+Create an Application Gateway:
+$appGatewayName = "myAppGateway"
+$frontendIpConfigName = "myFrontEndIPConfig"
+$backendPoolName = "myBackEndPool"
+$httpListenerName = "myHttpListener"
+$routingRuleName = "myRoutingRule"
+
+# Create a frontend IP configuration
+$frontendIpConfig = New-AzApplicationGatewayFrontendIPConfig -Name $frontendIpConfigName -PublicIPAddressId (Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName).Id
+
+# Create a backend address pool
+$backendPool = New-AzApplicationGatewayBackendAddressPool -Name $backendPoolName
+
+# Create a HTTP settings configuration
+$httpSettings = New-AzApplicationGatewayBackendHttpSettings -Name "myHttpSettings" -Port 80 -Protocol Http
+
+# Create a HTTP listener
+$httpListener = New-AzApplicationGatewayHttpListener -Name $httpListenerName -FrontendIPConfigurationId (Get-AzApplicationGatewayFrontendIPConfig -ResourceGroupName $resourceGroupName -Name $frontendIpConfigName).Id -FrontendPort 80 -Protocol Http
+
+# Create a routing rule
+$routingRule = New-AzApplicationGatewayUrlPathMapConfig -Name $routingRuleName -BackendAddressPoolId (Get-AzApplicationGatewayBackendAddressPool -ResourceGroupName $resourceGroupName -Name $backendPoolName).Id -BackendHttpSettingsId $httpSettings.Id -FrontendHttpListenerId (Get-AzApplicationGatewayHttpListener -ResourceGroupName $resourceGroupName -Name $httpListenerName).Id
+
+# Create the Application Gateway
+New-AzApplicationGateway -ResourceGroupName $resourceGroupName `
+                         -Name $appGatewayName `
+                         -Location $location `
+                         -FrontendIPConfigurations $frontendIpConfig `
+                         -BackendAddressPools $backendPool `
+                         -BackendHttpSettingsCollection $httpSettings `
+                         -HttpListeners $httpListener `
+                         -UrlPathMaps $routingRule
+
+# Setup-TrafficManagement.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$templateFile = "path/to/template.json"
+$parametersFile = "path/to/parameters.json"  # Optional
+$publicIpName = "myPublicIP"
+$loadBalancerName = "myLoadBalancer"
+$appGatewayName = "myAppGateway"
+
+# Task 1: Deploy Infrastructure Using ARM Template
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -TemplateParameterFile $parametersFile
+
+# Task 2: Configure Azure Load Balancer
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName `
+                       -Name $publicIpName `
+                       -Location $location `
+                       -AllocationMethod Static
+
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+
+New-AzLoadBalancer -ResourceGroupName $resourceGroupName `
+                    -Name $loadBalancerName `
+                    -Location $location `
+                    -FrontendIpConfiguration `
+                       -Name "myFrontEnd" `
+                       -PublicIpAddressId $publicIp.Id `
+                    -BackendAddressPool `
+                       -Name "myBackEnd" `
+                    -LoadBalancingRule `
+                       -Name "myLoadBalancingRule" `
+                       -FrontendIpConfigurationId (Get-AzLoadBalancerFrontendIpConfig -ResourceGroupName $resourceGroupName -LoadBalancerName $loadBalancerName -Name "myFrontEnd").Id `
+                       -BackendAddressPoolId (Get-AzLoadBalancerBackendAddressPool -ResourceGroupName $resourceGroupName -LoadBalancerName $loadBalancerName -Name "myBackEnd").Id `
+                       -Protocol Tcp `
+                       -FrontendPort 80 `
+                       -BackendPort 80
+
+New-AzLoadBalancerProbe -ResourceGroupName $resource
