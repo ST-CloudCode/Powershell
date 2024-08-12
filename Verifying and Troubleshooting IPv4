@@ -42,3 +42,56 @@ Get-NetIpConfiguration
 
 13. Verify connectivity again
 Test-NetConnection -ComputerName TOR-SVR1
+
+
+# Check-IPv4Address.ps1
+Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, PrefixLength
+Test-Connectivity.ps1 - Script to test connectivity to a specific IP address:
+
+## General Codes ##
+
+# Test-Connectivity.ps1
+param (
+    [string]$IPAddress
+)
+
+Test-Connection -ComputerName $IPAddress -Count 4
+Check-RoutingTable.ps1 - Script to display the IPv4 routing table:
+
+
+# Check-RoutingTable.ps1
+Get-NetRoute -AddressFamily IPv4 | Select-Object DestinationPrefix, NextHop, InterfaceAlias
+Resolve-DNS.ps1 - Script to resolve a hostname to an IPv4 address:
+
+# Resolve-DNS.ps1
+param (
+    [string]$Hostname
+)
+
+Resolve-DnsName -Name $Hostname -Type A | Select-Object Name, IPAddress
+
+# IPv4 Verification and Troubleshooting with PowerShell
+
+## Scripts
+
+### `Check-IPv4Address.ps1`
+Displays the IPv4 addresses assigned to network interfaces.
+
+**Usage:**
+```powershell
+.\Check-IPv4Address.ps1
+Test-Connectivity.ps1
+Tests connectivity to a specified IPv4 address.
+
+Usage:
+.\Test-Connectivity.ps1 -IPAddress "<target-ip>"
+Check-RoutingTable.ps1
+Displays the IPv4 routing table.
+
+Usage:
+.\Check-RoutingTable.ps1
+Resolve-DNS.ps1
+Resolves a hostname to an IPv4 address.
+
+Usage:
+.\Resolve-DNS.ps1 -Hostname "<target-hostname>"
