@@ -1,0 +1,180 @@
+##Steps to Implement Virtual Networking on Azure Using PowerShell
+###Task 1: Create a Virtual Network with Subnets Using PowerShell
+If you haven’t installed Azure PowerShell yet, do so with:
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+
+Choose the subscription where you want to create the virtual network:
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+Create a Virtual Network and Subnets
+Define the virtual network and subnet parameters:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$vnetName = "myVNet"
+$subnet1Name = "subnet1"
+$subnet2Name = "subnet2"
+
+# Create the resource group if it doesn't exist
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Define virtual network configuration
+$vnetConfig = New-AzVirtualNetworkConfig -Name $vnetName `
+                                          -AddressPrefix "10.0.0.0/16" `
+                                          -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet1Name -AddressPrefix "10.0.1.0/24") `
+                                          -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet2Name -AddressPrefix "10.0.2.0/24")
+
+# Create the virtual network
+New-AzVirtualNetwork -ResourceGroupName $resourceGroupName -Location $location -VirtualNetwork $vnetConfig
+
+### Task 2: Create a Virtual Network and Subnets Using an ARM Template
+Create an ARM Template File
+Save the following JSON template as vnet-template.json:
+
+{
+  "$schema": "https://schema.management.azure.com/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2021-02-01",
+      "name": "myVNet",
+      "location": "EastUS",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "subnet1",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24"
+            }
+          },
+          {
+            "name": "subnet2",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+Deploy the ARM Template
+
+Deploy the ARM template using PowerShell:
+$templateFile = "path/to/vnet-template.json"
+$deploymentName = "vnetDeployment"
+
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile `
+                               -DeploymentName $deploymentName
+###Task 3: Create and Configure Communication Between Application Security Group and Network Security Group
+Create an Application Security Group (ASG)
+Define and create the ASG:
+$asgName = "myASG"
+
+New-AzApplicationSecurityGroup -ResourceGroupName $resourceGroupName `
+                                -Name $asgName `
+                                -Location $location
+
+Create a Network Security Group (NSG)
+$nsgName = "myNSG"
+
+New-AzNetworkSecurityGroup -ResourceGroupName $resourceGroupName `
+                           -Location $location `
+                           -Name $nsgName
+
+Define and create a security rule to allow traffic from the ASG:
+$ruleName = "AllowASG"
+
+$nsgRule = New-AzNetworkSecurityRuleConfig -Name $ruleName `
+                                           -Description "Allow traffic from ASG" `
+                                           -Access Allow `
+                                           -Protocol Tcp `
+                                           -Direction Inbound `
+                                           -Priority 100 `
+                                           -SourceApplicationSecurityGroups $asgName `
+                                           -SourcePortRange * `
+                                           -DestinationAddressPrefix * `
+                                           -DestinationPortRange 80
+
+# Update NSG with new rule
+Set-AzNetworkSecurityGroup -ResourceGroupName $resourceGroupName `
+                            -Name $nsgName `
+                            -SecurityRules $nsgRule
+
+Associate the NSG with a subnet in the virtual network:
+$subnetName = "subnet1"
+
+# Retrieve virtual network
+$vnet = Get-AzVirtualNetwork -ResourceGroupName $resourceGroupName -Name $vnetName
+
+# Retrieve subnet
+$subnet = $vnet.Subnets | Where-Object { $_.Name -eq $subnetName }
+
+# Update subnet with NSG
+$subnet.NetworkSecurityGroup = $nsg
+Set-AzVirtualNetwork -VirtualNetwork $vnet
+
+###Task 4: Configure and Test Azure DNS Zones
+Define and create a public DNS zone:
+$publicDnsZoneName = "example.com"
+
+New-AzDnsZone -ResourceGroupName $resourceGroupName `
+               -Name $publicDnsZoneName `
+               -ZoneType Public
+
+Define and create a private DNS zone:
+$privateDnsZoneName = "internal.example.com"
+
+New-AzDnsZone -ResourceGroupName $resourceGroupName `
+               -Name $privateDnsZoneName `
+               -ZoneType Private
+
+Link the private DNS zone to the virtual network:
+New-AzDnsZoneVirtualNetworkLink -ResourceGroupName $resourceGroupName `
+                                 -ZoneName $privateDnsZoneName `
+                                 -Name "vnetLink" `
+                                 -VirtualNetworkId $vnet.Id
+
+# Manage-VirtualNetworking.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$vnetName = "myVNet"
+$subnet1Name = "subnet1"
+$subnet2Name = "subnet2"
+$templateFile = "path/to/vnet-template.json"
+$deploymentName = "vnetDeployment"
+$asgName = "myASG"
+$nsgName = "myNSG"
+$ruleName = "AllowASG"
+$publicDnsZoneName = "example.com"
+$privateDnsZoneName = "internal.example.com"
+$subnetName = "subnet1"
+
+# Task 1: Create a Virtual Network and Subnets
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+$vnetConfig = New-AzVirtualNetworkConfig -Name $vnetName `
+                                          -AddressPrefix "10.0.0.0/16" `
+                                          -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet1Name -AddressPrefix "10.0.1.0/24") `
+                                          -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet2Name -AddressPrefix "10.0.2.0/24")
+New-AzVirtualNetwork -ResourceGroupName $resource
