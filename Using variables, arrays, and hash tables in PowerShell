@@ -1,0 +1,159 @@
+# Using Variables, Arrays, and Hash Tables in PowerShell
+
+## Exercise 1: Working with Variable Types
+
+### Task 1: Use String Variables
+1. **Set the `$logPath` variable:**
+    ```powershell
+    $logPath = "C:\Logs\"
+    ```
+2. **Display the variable type for `$logPath`:**
+    ```powershell
+    $logPath.GetType()
+    ```
+3. **Review the properties and methods for the `$logPath` variable:**
+    ```powershell
+    $logPath | Get-Member
+    ```
+4. **Set the `$logFile` variable:**
+    ```powershell
+    $logFile = "log.txt"
+    ```
+5. **Add the `$logFile` variable to the `$logPath` variable:**
+    ```powershell
+    $logPath += $logFile
+    ```
+6. **Review the contents of the `$logPath` variable:**
+    ```powershell
+    $logPath
+    ```
+7. **Replace `C:` with `D:` in the `$logPath` value:**
+    ```powershell
+    $logPath.Replace("C:","D:")
+    ```
+8. **Update the `$logPath` variable with the new value:**
+    ```powershell
+    $logPath = $logPath.Replace("C:","D:")
+    ```
+9. **Review the contents of the updated `$logPath` variable:**
+    ```powershell
+    $logPath
+    ```
+    *Leave the Windows PowerShell prompt open for the next task.*
+
+### Task 2: Use DateTime Variables
+1. **Set the `$today` variable equal to today's date:**
+    ```powershell
+    $today = Get-Date
+    ```
+2. **Review the variable type of the `$today` variable:**
+    ```powershell
+    $today.GetType()
+    ```
+3. **Review the properties and methods for the `$today` variable:**
+    ```powershell
+    $today | Get-Member
+    ```
+4. **Set a log file name based on the date:**
+    ```powershell
+    $logFile = [string]$today.Year + "-" + $today.Month + "-" + $today.Day + "-" + $today.Hour + "-" + $today.Minute + ".txt"
+    ```
+5. **Calculate a date 30 days before today:**
+    ```powershell
+    $cutOffDate = $today.AddDays(-30)
+    ```
+6. **Review users that haven't signed in for the last 30 days:**
+    ```powershell
+    Get-ADUser -Properties LastLogonDate -Filter {LastLogonDate -gt $cutOffDate}
+    ```
+    *Leave the Windows PowerShell prompt open for the next exercise.*
+
+## Exercise 2: Using Arrays
+
+### Task 1: Use an Array to Update the Department for Users
+1. **Query all users in the Marketing department:**
+    ```powershell
+    $mktgUsers = Get-ADUser -Filter {Department -eq "Marketing"} -Properties Department
+    ```
+2. **Identify how many users are in the `$mktgUsers` variable:**
+    ```powershell
+    $mktgUsers.count
+    ```
+3. **Review the first user in `$mktgUsers`:**
+    ```powershell
+    $mktgUsers[0]
+    ```
+4. **Modify the department to Business Development:**
+    ```powershell
+    $mktgUsers | Set-ADUser -Department "Business Development"
+    ```
+5. **Review the Name and Department of users in the `$mktgUsers` variable:**
+    ```powershell
+    $mktgUsers | Format-Table Name,Department
+    ```
+    *Verify that the Department values in the `$mktgUsers` variable haven't changed.*
+6. **Query all users in the Marketing department again:**
+    ```powershell
+    Get-ADUser -Filter {Department -eq "Marketing"}
+    ```
+7. **Query all users in the Business Development department:**
+    ```powershell
+    Get-ADUser -Filter {Department -eq "Business Development"}
+    ```
+    *Leave the Windows PowerShell prompt open for the next task.*
+
+### Task 2: Use an Array List
+1. **Create an array list of computer names:**
+    ```powershell
+    [System.Collections.ArrayList]$computers="LON-SRV1","LON-SRV2","LON-DC1"
+    ```
+2. **Verify that the `$computers` array list is not fixed-size:**
+    ```powershell
+    $computers.IsFixedSize
+    ```
+3. **Add a computer name to the `$computers` array list:**
+    ```powershell
+    $computers.Add("LON-DC2")
+    ```
+4. **Remove a computer name from the `$computers` array list:**
+    ```powershell
+    $computers.Remove("LON-SRV2")
+    ```
+5. **Review the items in the `$computers` array list:**
+    ```powershell
+    $computers
+    ```
+    *Leave the Windows PowerShell prompt open for the next exercise.*
+
+## Exercise 3: Using Hash Tables
+
+### Task 1: Use a Hash Table
+1. **Create a hash table containing names and email addresses:**
+    ```powershell
+    $mailList=@{"Frank"="Frank@fabriakm.com";"Libby"="LHayward@contso.com";"Matej"="MSTaojanov@tailspintoys.com"}
+    ```
+2. **Review the contents of the `$mailList` hash table:**
+    ```powershell
+    $mailList
+    ```
+3. **Review the email address for Libby:**
+    ```powershell
+    $mailList.Libby
+    ```
+4. **Update the email address for Libby:**
+    ```powershell
+    $mailList.Libby="Libby.Hayward@contoso.com"
+    ```
+5. **Add a new name and email address to the hash table:**
+    ```powershell
+    $mailList.Add("Stela","Stela.Sahiti")
+    ```
+6. **Remove Frank from the hash table:**
+    ```powershell
+    $mailList.Remove("Frank")
+    ```
+7. **Review the contents of the `$mailList` hash table again:**
+    ```powershell
+    $mailList
+    ```
+    *Close the Windows PowerShell prompt.*
