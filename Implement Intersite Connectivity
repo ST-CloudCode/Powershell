@@ -1,0 +1,155 @@
+## Steps to Implement Intersite Connectivity on Azure Using PowerShell
+### Task 1: Create Virtual Machines in Different Virtual Networks
+Install the Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+Set the context to the correct subscription:
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+Define and create resource groups for your virtual networks and virtual machines:
+$resourceGroup1 = "myResourceGroup1"
+$resourceGroup2 = "myResourceGroup2"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroup1 -Location $location
+New-AzResourceGroup -Name $resourceGroup2 -Location $location
+
+Create virtual networks and subnets in both resource groups:
+# Virtual Network in Resource Group 1
+$vnet1Name = "myVNet1"
+$subnet1Name = "subnet1"
+
+New-AzVirtualNetwork -ResourceGroupName $resourceGroup1 `
+                      -Location $location `
+                      -Name $vnet1Name `
+                      -AddressPrefix "10.1.0.0/16" `
+                      -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet1Name -AddressPrefix "10.1.1.0/24")
+
+# Virtual Network in Resource Group 2
+$vnet2Name = "myVNet2"
+$subnet2Name = "subnet2"
+
+New-AzVirtualNetwork -ResourceGroupName $resourceGroup2 `
+                      -Location $location `
+                      -Name $vnet2Name `
+                      -AddressPrefix "10.2.0.0/16" `
+                      -Subnet (New-AzVirtualNetworkSubnetConfig -Name $subnet2Name -AddressPrefix "10.2.1.0/24")
+
+Define and create virtual machines in each virtual network:
+# Virtual Machine in Resource Group 1
+$vmName1 = "myVM1"
+$nic1 = New-AzNetworkInterface -ResourceGroupName $resourceGroup1 `
+                               -Location $location `
+                               -Name "$vmName1-nic" `
+                               -SubnetId (Get-AzVirtualNetwork -ResourceGroupName $resourceGroup1 -Name $vnet1Name).Subnets[0].Id
+
+New-AzVM -ResourceGroupName $resourceGroup1 `
+         -Location $location `
+         -Name $vmName1 `
+         -ImageName "UbuntuLTS" `
+         -Size "Standard_DS1_v2" `
+         -NetworkInterfaceId $nic1.Id `
+         -Credential (Get-Credential)
+
+# Virtual Machine in Resource Group 2
+$vmName2 = "myVM2"
+$nic2 = New-AzNetworkInterface -ResourceGroupName $resourceGroup2 `
+                               -Location $location `
+                               -Name "$vmName2-nic" `
+                               -SubnetId (Get-AzVirtualNetwork -ResourceGroupName $resourceGroup2 -Name $vnet2Name).Subnets[0].Id
+
+New-AzVM -ResourceGroupName $resourceGroup2 `
+         -Location $location `
+         -Name $vmName2 `
+         -ImageName "UbuntuLTS" `
+         -Size "Standard_DS1_v2" `
+         -NetworkInterfaceId $nic2.Id `
+         -Credential (Get-Credential)
+
+###Task 2: Use Network Watcher to Test the Connection Between Virtual Machines
+
+Ensure Network Watcher is enabled in the regions where your VMs are deployed:
+# Enable Network Watcher in the East US region
+$location = "EastUS"
+
+Enable-AzNetworkWatcher -Location $location
+
+Use Network Watcher to test connectivity between the two virtual machines:
+$vm1Ip = (Get-AzPublicIpAddress -ResourceGroupName $resourceGroup1 -Name "$vmName1-ip").IpAddress
+$vm2Ip = (Get-AzPublicIpAddress -ResourceGroupName $resourceGroup2 -Name "$vmName2-ip").IpAddress
+
+Test-AzNetworkWatcherConnection -ResourceGroupName $resourceGroup1 `
+                                  -DestinationAddress $vm2Ip `
+                                  -Protocol Tcp `
+                                  -DestinationPort 22 `
+                                  -SourceAddress $vm1Ip
+###Task 3: Configure Virtual Network Peerings
+
+Configure peering between the two virtual networks:
+# Peering from VNet1 to VNet2
+New-AzVirtualNetworkPeering -ResourceGroupName $resourceGroup1 `
+                             -VirtualNetworkName $vnet1Name `
+                             -Name "VNet1-to-VNet2" `
+                             -RemoteVirtualNetworkId (Get-AzVirtualNetwork -ResourceGroupName $resourceGroup2 -Name $vnet2Name).Id `
+                             -AllowVirtualNetworkAccess $true `
+                             -AllowForwardedTraffic $true `
+                             -AllowGatewayTransit $false `
+                             -UseRemoteGateways $false
+
+# Peering from VNet2 to VNet1
+New-AzVirtualNetworkPeering -ResourceGroupName $resourceGroup2 `
+                             -VirtualNetworkName $vnet2Name `
+                             -Name "VNet2-to-VNet1" `
+                             -RemoteVirtualNetworkId (Get-AzVirtualNetwork -ResourceGroupName $resourceGroup1 -Name $vnet1Name).Id `
+                             -AllowVirtualNetworkAccess $true `
+                             -AllowForwardedTraffic $true `
+                             -AllowGatewayTransit $false `
+                             -UseRemoteGateways $false
+###Task 4: Create a Custom Route
+
+Define and create a route table:
+$routeTableName = "myRouteTable"
+$routeName = "CustomRoute"
+
+New-AzRouteTable -ResourceGroupName $resourceGroup1 `
+                  -Location $location `
+                  -Name $routeTableName
+
+Add a custom route to the route table:
+$destinationPrefix = "10.2.0.0/16"
+$nextHopType = "VirtualNetworkGateway"
+
+Add-AzRouteConfig -Name $routeName `
+                   -ResourceGroupName $resourceGroup1 `
+                   -RouteTableName $routeTableName `
+                   -AddressPrefix $destinationPrefix `
+                   -NextHopType $nextHopType
+
+Associate the route table with a subnet:
+$subnet = Get-AzVirtualNetwork -ResourceGroupName $resourceGroup1 -Name $vnet1Name | Get-AzVirtualNetworkSubnetConfig -Name $subnet1Name
+
+$subnet.RouteTable = (Get-AzRouteTable -ResourceGroupName $resourceGroup1 -Name $routeTableName)
+Set-AzVirtualNetwork -ResourceGroupName $resourceGroup1 -Name $vnet1Name -Subnet $subnet
+
+# Manage-IntersiteConnectivity.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroup1 = "myResourceGroup1"
+$resourceGroup2 = "myResourceGroup2"
+$location = "EastUS"
+$vnet1Name = "myVNet1"
+$vnet2Name = "myVNet2"
+$subnet1Name = "subnet1"
+$subnet2Name =
