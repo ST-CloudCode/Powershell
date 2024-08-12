@@ -1,0 +1,142 @@
+# Querying Information by Using WMI and CIM
+
+## Exercise 1: Querying Information by Using WMI
+
+### Task 1: Query IP Addresses
+1. Open PowerShell as Administrator on `AZ-040T00A-LON-CL1`.
+2. Find a repository class that lists IP addresses:
+    ```powershell
+    Get-WmiObject -Namespace root\cimv2 -List | Where Name -like '*configuration*' | Sort Name
+    ```
+    *Notice the `Win32_NetworkAdapterConfiguration` class.*
+3. Retrieve all instances of the class depicting static IP addresses:
+    ```powershell
+    Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where DHCPEnabled -eq $False | Select IPAddress
+    ```
+    *Note:* You can run the first command and pipe its output to `Get-Member` to review available properties.
+
+### Task 2: Query Operating System Version Information
+1. Find a repository class that lists operating system information:
+    ```powershell
+    Get-WmiObject -Namespace root\cimv2 -List | Where Name -like '*operating*' | Sort Name
+    ```
+    *Notice the `Win32_OperatingSystem` class.*
+2. Display a list of properties for the class:
+    ```powershell
+    Get-WmiObject -Class Win32_OperatingSystem | Get-Member
+    ```
+    *Notice the `Version`, `ServicePackMajorVersion`, and `BuildNumber` properties.*
+3. Display the specified information:
+    ```powershell
+    Get-WmiObject -Class Win32_OperatingSystem | Select Version, ServicePackMajorVersion, BuildNumber
+    ```
+
+### Task 3: Query Computer System Hardware Information
+1. Find a repository class that displays computer system information:
+    ```powershell
+    Get-WmiObject -Namespace root\cimv2 -List | Where Name -like '*system*' | Sort Name
+    ```
+    *Notice the `Win32_ComputerSystem` class.*
+2. Display a list of instance properties and values:
+    ```powershell
+    Get-WmiObject -Class Win32_ComputerSystem | Format-List -Property *
+    ```
+    *Note:* `Get-Member` doesn't display property values, but `Format-List` can.
+3. Display specified information:
+    ```powershell
+    Get-WmiObject -Class Win32_ComputerSystem | Select Manufacturer, Model, @{n='RAM'; e={$PSItem.TotalPhysicalMemory}}
+    ```
+
+### Task 4: Query Service Information
+1. Find a repository class that contains information about services:
+    ```powershell
+    Get-WmiObject -Namespace root\cimv2 -List | Where Name -like '*service*' | Sort Name
+    ```
+    *Notice the `Win32_Service` class.*
+2. Display a list of instance properties and values:
+    ```powershell
+    Get-WmiObject -Class Win32_Service | FL *
+    ```
+3. Display specified information:
+    ```powershell
+    Get-WmiObject -Class Win32_Service -Filter "Name LIKE 'S%'" | Select Name, State, StartName
+    ```
+    *Leave the Windows PowerShell console open for the next exercise.*
+
+## Exercise 2: Querying Information by Using CIM
+
+### Task 1: Query User Accounts
+1. Find a repository class that lists user accounts:
+    ```powershell
+    Get-CimClass -ClassName *user*
+    ```
+    *Notice the `Win32_UserAccount` class.*
+2. Display a list of class properties:
+    ```powershell
+    Get-CimInstance -Class Win32_UserAccount | Get-Member
+    ```
+3. Display specified information:
+    ```powershell
+    Get-CimInstance -Class Win32_UserAccount | Format-Table -Property Caption, Domain, SID, FullName, Name
+    ```
+    *Notice the returned list of all domain and local accounts.*
+
+### Task 2: Query BIOS Information
+1. Find a repository class that contains BIOS information:
+    ```powershell
+    Get-CimClass -ClassName *bios*
+    ```
+    *Notice the `Win32_BIOS` class.*
+2. Display specified information:
+    ```powershell
+    Get-CimInstance -Class Win32_BIOS
+    ```
+
+### Task 3: Query Network Adapter Configuration Information
+1. Display a list of all local `Win32_NetworkAdapterConfiguration` instances:
+    ```powershell
+    Get-CimInstance -Classname Win32_NetworkAdapterConfiguration
+    ```
+2. Display a list of all `Win32_NetworkAdapterConfiguration` instances on `AZ-040T00A-LON-DC1`:
+    ```powershell
+    Get-CimInstance -Classname Win32_NetworkAdapterConfiguration -ComputerName LON-DC1
+    ```
+
+### Task 4: Query User Group Information
+1. Find a repository class that lists user groups:
+    ```powershell
+    Get-CimClass -ClassName *group*
+    ```
+    *Notice the `Win32_Group` class.*
+2. Display specified information:
+    ```powershell
+    Get-CimInstance -ClassName Win32_Group -ComputerName LON-DC1
+    ```
+    *Leave the Windows PowerShell console open for the next exercise.*
+
+## Exercise 3: Invoking Methods
+
+### Task 1: Invoke a CIM Method
+1. To restart `AZ-040T00A-LON-DC1`:
+    ```powershell
+    Invoke-CimMethod -ClassName Win32_OperatingSystem -ComputerName LON-DC1 -MethodName Reboot
+    ```
+    *Notice the response that includes `ReturnValue=0` and `PSComputerName=LON-DC1`.*
+2. Switch to the `AZ-040T00A-LON-DC1` virtual machine and observe it restarting.
+3. When the restart is complete, switch back to the `AZ-040T00A-LON-CL1` virtual machine.
+
+### Task 2: Invoke a WMI Method
+1. Review properties of the `WinRM` service:
+    ```powershell
+    Get-Service WinRM | FL *
+    ```
+    *Note that the `StartType` is Manual.*
+2. Change the start mode of the `WinRM` service:
+    ```powershell
+    Get-WmiObject -Class Win32_Service -Filter "Name='WinRM'" | Invoke-WmiMethod -Name ChangeStartMode -Argument 'Automatic'
+    ```
+3. Verify that the `StartType` of the `WinRM` service has changed:
+    ```powershell
+    Get-Service WinRM | FL *
+    ```
+    *Note that the `StartType` is Automatic.*
