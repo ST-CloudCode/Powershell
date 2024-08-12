@@ -1,0 +1,79 @@
+# Performing Remote Administration with PowerShell
+
+## Exercise 1: Enabling Remoting on the Local Computer
+
+### Task 1: Enable Remoting for Incoming Connections
+1. Ensure that you're signed in to the Computer you wish to enable remoting.
+2. Select the Start menu, and then enter `powershell`.
+3. In the results list, right-click Windows PowerShell or activate its context menu, and select `Run as administrator`.
+4. To ensure you have the correct execution policy in place, enter the following command and press Enter:
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned
+Select Yes or Enter Y to confirm the change.
+5. Run the following command:
+Enable-PSremoting -SkipNetworkProfileCheck
+If prompted, answer Yes to all prompts by selecting Y. This will enable remoting.
+6. To find a command that can list session configurations, enter the following command and press Enter:
+help *sessionconfiguration*
+7. To list session configurations, enter the following command and press Enter:
+Get-PSSessionConfiguration
+
+## Exercise 2: Performing One-to-One Remoting
+### Task 1: Connect to the Remote Computer and Install an Operating System Feature on It
+
+Enter-PSSession –ComputerName *Enter Computer name*
+After you're connected, to install the Network Load Balancing (NLB) feature on Computer, enter the following command and press Enter:
+Install-WindowsFeature NLB
+Wait for the command to complete.
+To disconnect, enter the following command and press Enter:
+Exit-PSSession
+
+### Task 2: Test Multi-Hop Remoting
+To establish a one-to-one remoting connection to the computer, enter the following command and press Enter:
+Enter-PSSession –ComputerName *Enter Computer Name*
+To establish a connection from Computer 1 to Computer 2, enter the following command and press Enter:
+Enter-PSSession –ComputerName *Computer Name*
+To close the connection, enter the following command and press Enter:
+Exit-PSSession
+
+### Task 3: Observe Remoting Limitations
+To establish a one-to-one connection to a computer, enter the following command and press Enter:
+Enter-PSSession –ComputerName localhost
+To disconnect, enter the following command and press Enter:
+Exit-PSSession
+
+## Exercise 3: Performing One-to-Many Remoting
+### Task 1: Retrieve a List of Physical Network Adapters from Two Computers
+To find a command that can list network adapters, enter the following command in the Windows PowerShell window and press Enter:
+help *adapter*
+help Get-NetAdapter 
+
+###Task 2: Compare the Output of a Local Command to That of a Remote Command
+To review the members of a Process object, enter the following command and press Enter:
+Get-Process | Get-Member
+To review the members from a remote Process object, enter the following command and press Enter:
+Invoke-Command –ComputerName LON-DC1 –ScriptBlock { Get-Process } | Get-Member
+
+## Exercise 4: Using Implicit Remoting
+### Task 1: Create a Persistent Remoting Connection to a Server
+Create a persistent connection to a computer and store it in a variable by entering the following command and pressing Enter:
+$dc = New-PSSession –ComputerName *Enter Computer Name*
+To review the PSSession list in the variable, enter the following command and press Enter:
+$dc
+
+### Task 2: Import and Use a Module from a Server
+To display a list of modules on a computer, enter the following command and press Enter:
+Get-Module –ListAvailable –PSSession $dc
+To find a module on a computer that can work with Server Message Block (SMB) shares, enter the following command and press Enter:
+Get-Module –ListAvailable –PSSession $dc | Where { $_.Name –Like '*share*' }
+To import the module from a computer to your local computer, and to add the prefix DC to the important commands’ nouns, enter the following command and press Enter:
+Import-Module –PSSession $dc –Name SMBShare –Prefix DC
+To display a list of shares on a computer, enter the following command and press Enter:
+Get-DCSMBShare
+To display a list of shares on the local computer, enter the following command and press Enter:
+Get-SMBShare
+
+### Task 3: Close All Open Remoting Connections
+In the Windows PowerShell command window, enter the following command and press Enter:
+powershell
+Get-PSSession | Remove-PSSession
