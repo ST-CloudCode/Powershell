@@ -1,0 +1,46 @@
+##Steps to Create an SQL Server on Azure Using PowerShell
+1. Install the Azure PowerShell Module
+If you haven’t already, you need to install the Azure PowerShell module. Open PowerShell as an administrator and run:
+Install-Module -Name Az -AllowClobber -Force
+2. Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+3. Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+4. Create a Resource Group
+Create a resource group to organize your resources:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+5. Create the SQL Server
+Define the variables and create the SQL Server:
+$serverName = "mySqlServerName"  # Must be unique across Azure
+$adminLogin = "sqladmin"
+$adminPassword = "YourStrongP@ssword1"  # Use a strong password
+
+New-AzSqlServer -ResourceGroupName $resourceGroupName `
+                 -ServerName $serverName `
+                 -Location $location `
+                 -SqlAdministratorLogin $adminLogin `
+                 -SqlAdministratorPassword $adminPassword
+6. Create a SQL Database
+Define the database variables and create the database:
+$databaseName = "myDatabase"
+$skuName = "S0"  # The performance tier, adjust as needed
+
+New-AzSqlDatabase -ResourceGroupName $resourceGroupName `
+                   -ServerName $serverName `
+                   -DatabaseName $databaseName `
+                   -Edition "Standard" `
+                   -RequestedServiceObjectiveName $skuName
+7. Configure Server Firewall Rules
+Configure the firewall to allow connections:
+$startIp = "0.0.0.0"  # Allow all IP addresses (adjust as needed)
+$endIp = "255.255.255.255"
+
+New-AzSqlServerFirewallRule -ResourceGroupName $resourceGroupName `
+                             -ServerName $serverName `
+                             -FirewallRuleName "AllowAllIPs" `
+                             -StartIpAddress $startIp `
+                             -EndIpAddress $endIp
