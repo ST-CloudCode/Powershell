@@ -1,0 +1,99 @@
+# Using Scripts with PowerShell
+
+## Exercise 1: Signing a Script
+
+### Task 1: Install a Code Signing Certificate
+1. On Computer, select Start, enter `mmc.exe`, and then select `mmc.exe`.
+2. In the MMC console, select File, and then select Add/Remove Snap-in.
+3. In the Add or Remove Snap-ins window, select Certificates, and then select Add.
+4. In the Certificates snap-in dialog box, select My user account, and then select Finish.
+5. In the Add or Remove Snap-ins window, select OK.
+6. In the MMC console, expand Certificates - Current User, and then select Personal.
+7. Right-click Personal or activate its context menu, hover over All Tasks, and then select Request New Certificate.
+8. In the Certificate Enrollment wizard, on the Before You Begin page, select Next.
+9. On the Select Certificate Enrollment Policy page, select Active Directory Enrollment Policy, and then select Next.
+10. On the Request Certificates page, select the Adatum Code Signing checkbox, and then select Enroll.
+11. On the Certificate Installation Results page, select Finish.
+12. In the MMC console, expand Personal, and then select Certificates to verify that the new code signing certificate is present.
+13. Close the MMC console and select No at the prompt to save the console settings.
+
+### Task 2: Digitally Sign a Script
+1. Select the Start button, enter `powershell`, and then select Windows PowerShell.
+2. At the Windows PowerShell prompt, enter the following command and press Enter:
+   ```powershell
+Get-ChildItem Cert:\CurrentUser\My\ -CodeSigningCert
+$cert = Get-ChildItem Cert:\CurrentUser\My\ -CodeSigningCert
+Set-Location E:\Mod07\Labfiles
+Rename-Item HelloWorld.txt HelloWorld.ps1
+Set-AuthenticodeSignature -FilePath HelloWorld.ps1 -Certificate $cert
+
+### Task 3: Set the Execution Policy
+At the Windows PowerShell prompt, enter the following command and press Enter. Enter Y at the prompt and press Enter:
+Set-ExecutionPolicy AllSigned
+.\HelloWorld.ps1
+Set-ExecutionPolicy Unrestricted
+
+## Exercise 2: Processing an Array with a ForEach Loop
+
+### Task 1: Create a Test Group
+At the Windows PowerShell prompt, enter the following command and press Enter:
+New-ADGroup -Name IPPhoneTest -GroupScope Universal -GroupCategory Security
+Move-ADObject "CN=IPPhoneTest,CN=Users,DC=Adatum,DC=com" -TargetPath "OU=IT,DC=Adatum,DC=com"
+Add-ADGroupMember IPPhoneTest -Members Abbi,Ida,Parsa,Tonia
+
+## Exercise 3: Processing Items by Using If Statements
+### Task 1: Create services.txt with Service Names
+Select Start, enter powershell, and then select Windows PowerShell.
+Set-Location E:\Mod07\Labfiles
+New-Item services.txt -ItemType File
+Get-Service "Print Spooler" | Select -ExpandProperty Name | Out-File services.txt -Append
+Get-Service "Windows Time" | Select -ExpandProperty Name | Out-File services.txt -Append
+
+### Task 2: Create a Script that Starts Stopped Services
+
+$services = Get-Content services.txt
+
+ForEach ($s in $services) {
+    $status = (Get-Service $s).Status
+    If ($Status -ne "Running") {
+        Start-Service $s
+        Write-Host "Started $s"
+    } Else {
+        Write-Host "$s is already started"
+    }
+}
+
+##Exercise 4: Creating Users Based on a CSV File
+###Task 1: Create AD DS Users from a CSV File
+$users = Import-CSV users.csv
+
+ForEach ($u in $users) {
+    $path = "OU=" + $u.Department + ",DC=Adatum,DC=com"
+    $upn = $u.UserID + "@adatum.com"
+    $display = $u.First + " " + $u.Last
+    Write-Host "Creating $display in $path"
+    New-ADUser -GivenName $u.First -Surname $u.Last -Name $display -DisplayName $display -SamAccountName $u.UserID -UserPrincipalName $UPN -Path $path -Department $u.Department
+}
+
+##Exercise 5: Querying Disk Information from Remote Computers
+##Task 1: Create a Script that Queries Disk Information with Current Credentials
+param(
+    [string]$ComputerName=(Read-Host "Enter computer name")
+)
+
+Get-CimInstance Win32_LogicalDisk -ComputerName $ComputerName -Filter "DriveType=3"
+
+##Exercise 6: Updating the Script to Use Alternate Credentials
+###Task 1: Update the Script to Use Alternate Credentials
+param(
+    [string]$ComputerName=(Read-Host "Enter computer name"),
+    [switch]$AlternateCredential
+)
+
+If ($AlternateCredential -eq $true) {
+    $cred = Get-Credential
+    $session = New-CimSession -ComputerName $ComputerName -Credential $cred
+    Get-CimInstance Win32_LogicalDisk -CimSession $session -Filter "DriveType=3"
+} Else {
+    Get-CimInstance Win32_LogicalDisk -ComputerName $ComputerName -Filter "DriveType=3"
+}
