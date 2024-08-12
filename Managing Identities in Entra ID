@@ -1,0 +1,68 @@
+## Managing Identities in Entra ID
+## Replace identifiers applicable to setting.
+### Exercise 1: Creating users in Entra ID
+
+**PowerShell Script to Create Users:**
+
+```powershell
+# Install the Microsoft Graph module
+Install-Module Microsoft.Graph -Scope CurrentUser
+
+# Connect to Microsoft Graph
+Connect-MgGraph -scopes "user.readwrite.all, group.readwrite.all"
+
+# Create password profile object
+$PWProfile = @{
+    Password = "Pa55-w.rd!";
+    ForceChangePasswordNextSignIn = $false
+}
+
+# Create a new user
+New-MgUser `
+    -DisplayName "Cody Godinez" `
+    -GivenName "Cody" `
+    -Surname "Godinez" `
+    -MailNickname "cgodinez" `
+    -UsageLocation "US" `
+    -UserPrincipalName "cgodinez@M365x11791029.onmicrosoft.com" `
+    -PasswordProfile $PWProfile `
+    -AccountEnabled `
+    -Department "Sales" `
+    -JobTitle "Sales Rep"
+
+# Confirm user creation
+Get-MgUser
+Exercise 2: Assigning Administrative Roles in Entra ID
+PowerShell Script for Role Assignment:
+
+powershell
+Copy code
+# Assign Global Administrator role
+$globalAdminRoleId = (Get-MgRoleDefinition -Filter "displayName eq 'Global administrator'").Id
+$allUsers = Get-MgUser -Filter "displayName eq 'Allan Deyoung'"
+New-MgRoleAssignment -RoleDefinitionId $globalAdminRoleId -PrincipalId $allUsers.Id
+
+# Assign User Administrator role
+$userAdminRoleId = (Get-MgRoleDefinition -Filter "displayName eq 'User administrator'").Id
+$user = Get-MgUser -Filter "displayName eq 'Edmund Reeve'"
+New-MgRoleAssignment -RoleDefinitionId $userAdminRoleId -PrincipalId $user.Id
+
+# Assign Helpdesk Administrator role
+$helpdeskAdminRoleId = (Get-MgRoleDefinition -Filter "displayName eq 'Helpdesk administrator'").Id
+$helpdeskUser = Get-MgUser -Filter "displayName eq 'Miranda Snider'"
+New-MgRoleAssignment -RoleDefinitionId $helpdeskAdminRoleId -PrincipalId $helpdeskUser.Id
+Exercise 3: Creating and Managing Groups and Validating License Assignment
+PowerShell Script to Manage Groups and Licenses:
+
+powershell
+Copy code
+# Create a new security group
+New-MgGroup -DisplayName "Contoso_Sales" -Description "Contoso Sales team users" -MailEnabled:$false -Mailnickname "Contoso_Sales" -SecurityEnabled
+
+# Add user to the group
+$group = Get-MgGroup | Where-Object {$_.DisplayName -eq "Contoso_Sales"}
+$user = Get-MgUser | Where-Object {$_.DisplayName -eq "Cody Godinez"}
+New-MgGroupMember -GroupId $group.Id -DirectoryObjectId $user.Id
+
+# Verify group membership
+Get-MgGroupMember -GroupId $group.Id | FL
