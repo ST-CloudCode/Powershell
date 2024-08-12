@@ -1,0 +1,204 @@
+##Steps to Implement Governance via Azure Policy on Azure Using PowerShell
+##Task 1: Create and Assign Tags
+Install the Azure PowerShell module if you haven’t already:
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+Create a new resource group where you will apply the tags:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+Add tags to the resource group:
+$tags = @{
+    "Environment" = "Production"
+    "Department" = "Finance"
+}
+
+Set-AzTag -ResourceId (Get-AzResourceGroup -Name $resourceGroupName).ResourceId -Tags $tags -Operation Merge
+
+###Task 2: Enforce Tagging via an Azure Policy
+Define a policy to enforce required tags:
+$policyDefinitionName = "RequireTagPolicy"
+$policyDefinitionDisplayName = "Require tag policy"
+$policyRule = @"
+{
+    "if": {
+        "field": "tags['Environment']",
+        "equals": ""
+    },
+    "then": {
+        "effect": "deny"
+    }
+}
+"@
+
+New-AzPolicyDefinition -Name $policyDefinitionName `
+                       -DisplayName $policyDefinitionDisplayName `
+                       -Policy $policyRule `
+                       -Mode All
+Assign the policy to a scope, such as a resource group:
+$policyAssignmentName = "RequireTagAssignment"
+
+New-AzPolicyAssignment -Name $policyAssignmentName `
+                       -PolicyDefinition $policyDefinitionName `
+                       -Scope "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName"
+### Task 3: Apply Tagging via an Azure Policy
+
+Define a policy to apply tags:
+$applyTagPolicyName = "ApplyTagPolicy"
+$applyTagPolicyDisplayName = "Apply tag policy"
+$applyTagPolicyRule = @"
+{
+    "if": {
+        "not": {
+            "field": "tags['Environment']",
+            "equals": "Production"
+        }
+    },
+    "then": {
+        "effect": "modify",
+        "details": {
+            "roleDefinitionNames": [
+                "Contributor"
+            ],
+            "operations": [
+                {
+                    "operation": "add",
+                    "field": "tags['Environment']",
+                    "value": "Production"
+                }
+            ]
+        }
+    }
+}
+"@
+
+New-AzPolicyDefinition -Name $applyTagPolicyName `
+                       -DisplayName $applyTagPolicyDisplayName `
+                       -Policy $applyTagPolicyRule `
+                       -Mode All
+
+Assign the policy to apply tags:
+$applyTagPolicyAssignmentName = "ApplyTagAssignment"
+
+New-AzPolicyAssignment -Name $applyTagPolicyAssignmentName `
+                       -PolicyDefinition $applyTagPolicyName `
+                       -Scope "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName"
+### Task 4: Configure and Test Resource Locks
+Create a Resource Lock
+Apply a resource lock to prevent modifications:
+$lockName = "myResourceLock"
+$lockLevel = "CanNotDelete"  # Options: CanNotDelete, ReadOnly
+
+New-AzResourceLock -LockName $lockName `
+                    -LockLevel $lockLevel `
+                    -ResourceGroupName $resourceGroupName `
+                    -ResourceName $resourceGroupName `
+                    -ResourceType "Microsoft.Resources/resourceGroups"
+Verify the Resource Lock
+Check the applied resource lock:
+Get-AzResourceLock -ResourceGroupName $resourceGroupName `
+                    -ResourceName $resourceGroupName `
+                    -ResourceType "Microsoft.Resources/resourceGroups"
+
+# Manage-Governance.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$tags = @{
+    "Environment" = "Production"
+    "Department" = "Finance"
+}
+$policyDefinitionName = "RequireTagPolicy"
+$policyDefinitionDisplayName = "Require tag policy"
+$policyRule = @"
+{
+    "if": {
+        "field": "tags['Environment']",
+        "equals": ""
+    },
+    "then": {
+        "effect": "deny"
+    }
+}
+"@
+$applyTagPolicyName = "ApplyTagPolicy"
+$applyTagPolicyDisplayName = "Apply tag policy"
+$applyTagPolicyRule = @"
+{
+    "if": {
+        "not": {
+            "field": "tags['Environment']",
+            "equals": "Production"
+        }
+    },
+    "then": {
+        "effect": "modify",
+        "details": {
+            "roleDefinitionNames": [
+                "Contributor"
+            ],
+            "operations": [
+                {
+                    "operation": "add",
+                    "field": "tags['Environment']",
+                    "value": "Production"
+                }
+            ]
+        }
+    }
+}
+"@
+$lockName = "myResourceLock"
+$lockLevel = "CanNotDelete"  # Options: CanNotDelete, ReadOnly
+
+# Task 1: Create and Assign Tags
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+Set-AzTag -ResourceId (Get-AzResourceGroup -Name $resourceGroupName).ResourceId -Tags $tags -Operation Merge
+
+# Task 2: Enforce Tagging via an Azure Policy
+New-AzPolicyDefinition -Name $policyDefinitionName `
+                       -DisplayName $policyDefinitionDisplayName `
+                       -Policy $policyRule `
+                       -Mode All
+
+New-AzPolicyAssignment -Name "RequireTagAssignment" `
+                       -PolicyDefinition $policyDefinitionName `
+                       -Scope "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName"
+
+# Task 3: Apply Tagging via an Azure Policy
+New-AzPolicyDefinition -Name $applyTagPolicyName `
+                       -DisplayName $applyTagPolicyDisplayName `
+                       -Policy $applyTagPolicyRule `
+                       -Mode All
+
+New-AzPolicyAssignment -Name "ApplyTagAssignment" `
+                       -PolicyDefinition $applyTagPolicyName `
+                       -Scope "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName"
+
+# Task 4: Configure and Test Resource Locks
+New-AzResourceLock -LockName $lockName `
+                    -LockLevel $lockLevel `
+                    -ResourceGroupName $resourceGroupName `
+                    -ResourceName $resourceGroupName `
+                    -ResourceType "Microsoft.Resources/resourceGroups"
+
+Get-AzResourceLock -ResourceGroupName $resourceGroupName `
+                    -ResourceName $resourceGroupName `
+                    -ResourceType "Microsoft.Resources/resourceGroups"
