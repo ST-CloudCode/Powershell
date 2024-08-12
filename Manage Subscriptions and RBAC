@@ -1,0 +1,132 @@
+### Steps to Manage Subscriptions and RBAC on Azure Using PowerShell
+## Task 1: Create the Help Desk Group
+Install the Azure PowerShell module if you haven’t already:
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+Create a new Azure AD group for the Help Desk:
+$helpDeskGroupName = "HelpDesk"
+$helpDeskGroupDescription = "Group for Help Desk personnel"
+
+New-AzADGroup -DisplayName $helpDeskGroupName `
+               -Description $helpDeskGroupDescription `
+               -MailEnabled $false `
+               -SecurityEnabled $true
+
+Retrieve the Object ID of the newly created group:
+$helpDeskGroup = Get-AzADGroup -DisplayName $helpDeskGroupName
+$helpDeskGroupId = $helpDeskGroup.Id
+
+### Task 2: Implement Management Groups
+Create a management group to organize your subscriptions:
+$managementGroupId = "MyManagementGroup"
+$managementGroupDisplayName = "My Management Group"
+
+New-AzManagementGroup -GroupId $managementGroupId -DisplayName $managementGroupDisplayName
+Move a subscription to the management group:
+$subscriptionId = "<your-subscription-id>"
+Move-AzSubscription -SubscriptionId $subscriptionId -DestinationManagementGroupId $managementGroupId
+
+### Task 3: Review and Assign a Built-In Azure Role
+List all available built-in roles:
+Get-AzRoleDefinition
+
+Assign a built-in role (e.g., Reader) to the Help Desk group:
+$roleName = "Reader"
+$scope = "/subscriptions/$subscriptionId"
+
+New-AzRoleAssignment -RoleDefinitionName $roleName `
+                      -PrincipalId $helpDeskGroupId `
+                      -Scope $scope
+###Task 4: Create a Custom RBAC Role
+Define the Custom Role
+Create a custom RBAC role definition in JSON format:
+
+json
+Copy code
+{
+  "Name": "CustomHelpDeskRole",
+  "IsCustom": true,
+  "Description": "Custom role for Help Desk with limited permissions",
+  "Actions": [
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Resources/subscriptions/resourceGroups/resources/read"
+  ],
+  "NotActions": [],
+  "AssignableScopes": [
+    "/subscriptions/$subscriptionId"
+  ]
+}
+Save the Role Definition to a JSON File
+
+Save the above JSON to a file named CustomHelpDeskRole.json.
+
+Create the custom RBAC role using the JSON file:
+$roleDefinitionFile = "path/to/CustomHelpDeskRole.json"
+
+New-AzRoleDefinition -Role $roleDefinitionFile
+
+### Task 5: Monitor Role Assignments with the Activity Log
+Check role assignments in the Activity Log:
+$activityLog = Get-AzLog -ResourceProvider "Microsoft.Authorization" `
+                         -StartTime (Get-Date).AddDays(-30) `
+                         -EndTime (Get-Date) `
+                         -ResourceType "Microsoft.Authorization/roleAssignments"
+
+$activityLog | Format-Table -Property Id, CorrelationId, EventName, OperationName, Properties
+
+# Manage-RBAC.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$helpDeskGroupName = "HelpDesk"
+$helpDeskGroupDescription = "Group for Help Desk personnel"
+$managementGroupId = "MyManagementGroup"
+$managementGroupDisplayName = "My Management Group"
+$roleName = "Reader"
+$scope = "/subscriptions/<your-subscription-id>"
+$customRoleName = "CustomHelpDeskRole"
+$customRoleDescription = "Custom role for Help Desk with limited permissions"
+$customRoleDefinitionFile = "path/to/CustomHelpDeskRole.json"
+
+# Task 1: Create the Help Desk Group
+New-AzADGroup -DisplayName $helpDeskGroupName `
+               -Description $helpDeskGroupDescription `
+               -MailEnabled $false `
+               -SecurityEnabled $true
+
+$helpDeskGroup = Get-AzADGroup -DisplayName $helpDeskGroupName
+$helpDeskGroupId = $helpDeskGroup.Id
+
+# Task 2: Implement Management Groups
+New-AzManagementGroup -GroupId $managementGroupId -DisplayName $managementGroupDisplayName
+Move-AzSubscription -SubscriptionId $subscriptionId -DestinationManagementGroupId $managementGroupId
+
+# Task 3: Review and Assign a Built-In Azure Role
+Get-AzRoleDefinition
+New-AzRoleAssignment -RoleDefinitionName $roleName `
+                      -PrincipalId $helpDeskGroupId `
+                      -Scope $scope
+
+# Task 4: Create a Custom RBAC Role
+New-AzRoleDefinition -Role $customRoleDefinitionFile
+
+# Task 5: Monitor Role Assignments with the Activity Log
+$activityLog = Get-AzLog -ResourceProvider "Microsoft.Authorization" `
+                          -StartTime (Get-Date).AddDays(-30) `
+                          -EndTime (Get-Date) `
+                          -ResourceType "Microsoft.Authorization/roleAssignments"
+
+$activityLog | Format-Table -Property Id, CorrelationId, EventName, OperationName, Properties
