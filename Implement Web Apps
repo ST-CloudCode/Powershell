@@ -1,0 +1,190 @@
+##Steps to Implement Web Apps on Azure Using PowerShell
+###Task 1: Create and Configure an Azure Web App
+Install the Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+# Create a new resource group if needed
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+Create an App Service Plan for your web app:
+$appServicePlanName = "myAppServicePlan"
+
+New-AzAppServicePlan -ResourceGroupName $resourceGroupName `
+                      -Name $appServicePlanName `
+                      -Location $location `
+                      -Tier Standard `
+                      -NumberofWorkers 1 `
+                      -WorkerSize Small
+
+Create a web app within the App Service Plan:
+$webAppName = "myWebApp"
+
+New-AzWebApp -ResourceGroupName $resourceGroupName `
+              -Name $webAppName `
+              -Location $location `
+              -AppServicePlan $appServicePlanName
+### Task 2: Create and Configure a Deployment Slot
+Create a new deployment slot:
+$slotName = "staging"
+
+New-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                  -Name $webAppName `
+                  -Slot $slotName
+Configure specific settings for the deployment slot, if needed:
+$slotSettings = @{
+    "SLOT_NAME" = $slotName
+}
+
+Set-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                  -Name $webAppName `
+                  -Slot $slotName `
+                  -AppSettings $slotSettings
+### Task 3: Configure Web App Deployment Settings
+Configure the deployment source for the web app (e.g., GitHub, Azure Repos):
+$sourceControl = @{
+    "repoURL" = "https://github.com/<username>/my-repo"
+    "branch" = "main"
+}
+
+Set-AzWebAppSourceControl -ResourceGroupName $resourceGroupName `
+                           -Name $webAppName `
+                           -Branch $sourceControl.branch `
+                           -RepoUrl $sourceControl.repoURL
+### Task 4: Swap Deployment Slots
+Swap content between the production slot and the staging slot:
+Swap-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                   -Name $webAppName `
+                   -SourceSlot $slotName `
+                   -DestinationSlot "production"
+### Task 5: Configure and Test Autoscaling of the Azure Web App
+Configure autoscale settings for the App Service Plan:
+$autoscaleSettingsName = "myAutoscaleSettings"
+$autoscaleProfileName = "myAutoscaleProfile"
+$scaleUpRule = @{
+    MetricName = "CpuPercentage"
+    Operator = "GreaterThan"
+    Threshold = 70
+    Direction = "Increase"
+    ChangeCount = 1
+    Duration = "PT5M"
+}
+$scaleDownRule = @{
+    MetricName = "CpuPercentage"
+    Operator = "LessThan"
+    Threshold = 30
+    Direction = "Decrease"
+    ChangeCount = 1
+    Duration = "PT10M"
+}
+
+New-AzAutoscaleSetting -ResourceGroupName $resourceGroupName `
+                        -Name $autoscaleSettingsName `
+                        -Location $location `
+                        -TargetResourceId (Get-AzAppServicePlan -ResourceGroupName $resourceGroupName -Name $appServicePlanName).Id `
+                        -AutoscaleProfile `
+                            -Name $autoscaleProfileName `
+                            -Capacity `
+                                -Minimum "1" `
+                                -Maximum "5" `
+                                -Default "1" `
+                            -ScaleUpRule $scaleUpRule `
+                            -ScaleDownRule $scaleDownRule
+
+Check the autoscale settings to ensure they are correctly configured:
+Get-AzAutoscaleSetting -ResourceGroupName $resourceGroupName -Name $autoscaleSettingsName
+
+# Setup-WebApp.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$appServicePlanName = "myAppServicePlan"
+$webAppName = "myWebApp"
+$slotName = "staging"
+$autoscaleSettingsName = "myAutoscaleSettings"
+$autoscaleProfileName = "myAutoscaleProfile"
+$sourceControlRepoURL = "https://github.com/<username>/my-repo"
+$sourceControlBranch = "main"
+
+# Task 1: Create and Configure an Azure Web App
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+New-AzAppServicePlan -ResourceGroupName $resourceGroupName `
+                      -Name $appServicePlanName `
+                      -Location $location `
+                      -Tier Standard `
+                      -NumberofWorkers 1 `
+                      -WorkerSize Small
+
+New-AzWebApp -ResourceGroupName $resourceGroupName `
+              -Name $webAppName `
+              -Location $location `
+              -AppServicePlan $appServicePlanName
+
+# Task 2: Create and Configure a Deployment Slot
+New-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                  -Name $webAppName `
+                  -Slot $slotName
+
+$slotSettings = @{
+    "SLOT_NAME" = $slotName
+}
+
+Set-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                  -Name $webAppName `
+                  -Slot $slotName `
+                  -AppSettings $slotSettings
+
+# Task 3: Configure Web App Deployment Settings
+Set-AzWebAppSourceControl -ResourceGroupName $resourceGroupName `
+                           -Name $webAppName `
+                           -Branch $sourceControlBranch `
+                           -RepoUrl $sourceControlRepoURL
+
+# Task 4: Swap Deployment Slots
+Swap-AzWebAppSlot -ResourceGroupName $resourceGroupName `
+                    -Name $webAppName `
+                    -SourceSlot $slotName `
+                    -DestinationSlot "production"
+
+# Task 5: Configure and Test Autoscaling of the Azure Web App
+$scaleUpRule = @{
+    MetricName = "CpuPercentage"
+    Operator = "GreaterThan"
+    Threshold = 70
+    Direction = "Increase"
+    ChangeCount = 1
+    Duration = "PT5M"
+}
+$scaleDownRule = @{
+    MetricName = "CpuPercentage"
+    Operator = "LessThan"
+    Threshold = 30
+    Direction = "Decrease"
+    ChangeCount = 1
+    Duration = "PT10M"
+}
+
+New-AzAutoscaleSetting -ResourceGroupName $resourceGroupName `
+                         -Name $autoscaleSettingsName `
+                         -Location $location `
+                         -TargetResourceId (Get-AzAppServicePlan -ResourceGroupName $resourceGroupName -Name $appServicePlanName).Id `
+                         -AutoscaleProfile `
+                             -Name $autoscaleProfileName `
+                            
