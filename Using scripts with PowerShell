@@ -44,7 +44,7 @@ Add-ADGroupMember IPPhoneTest -Members Abbi,Ida,Parsa,Tonia
 ## Exercise 3: Processing Items by Using If Statements
 ### Task 1: Create services.txt with Service Names
 Select Start, enter powershell, and then select Windows PowerShell.
-Set-Location E:\Mod07\Labfiles
+Set-Location E:\Anylocation
 New-Item services.txt -ItemType File
 Get-Service "Print Spooler" | Select -ExpandProperty Name | Out-File services.txt -Append
 Get-Service "Windows Time" | Select -ExpandProperty Name | Out-File services.txt -Append
