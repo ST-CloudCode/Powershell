@@ -1,0 +1,219 @@
+# Using PowerShell Pipeline
+
+## Exercise 1: Selecting, Sorting, and Displaying Data
+
+### Task 1: Display the Current Day of the Year
+1. Open PowerShell as Administrator.
+2. Display the `Get-Date` command help:
+    ```powershell
+    help *date*
+    ```
+3. Display the properties of the `Get-Date` object:
+    ```powershell
+    Get-Date | Get-Member
+    ```
+4. Select and display the `DayOfYear` property:
+    ```powershell
+    Get-Date | Select-Object –Property DayOfYear
+    ```
+5. Format the output as a list:
+    ```powershell
+    Get-Date | Select-Object -Property DayOfYear | fl
+    ```
+
+### Task 2: Display Information About Installed Hotfixes
+1. Find the command related to hotfixes:
+    ```powershell
+    Get-Command *hotfix*
+    ```
+2. Display the properties of the hotfix object:
+    ```powershell
+    Get-Hotfix | Get-Member
+    ```
+3. Select specific properties from the hotfix information:
+    ```powershell
+    Get-Hotfix | Select-Object –Property HotFixID,InstalledOn,InstalledBy
+    ```
+4. Calculate the age of the hotfix:
+    ```powershell
+    Get-Hotfix | Select-Object –Property HotFixID,@{n='HotFixAge';e={(New-TimeSpan -Start $PSItem.InstalledOn).Days}},InstalledBy
+    ```
+
+### Task 3: Display a List of Available Scopes from the DHCP Server
+1. Find the DHCP server scope command:
+    ```powershell
+    help *scope*
+    ```
+2. Display the help for `Get-DHCPServerv4Scope`:
+    ```powershell
+    Help Get-DHCPServerv4Scope –ShowWindow
+    ```
+3. Close the help window and list DHCP scopes:
+    ```powershell
+    Get-DHCPServerv4Scope –ComputerName LON-DC1
+    ```
+4. Format the output:
+    ```powershell
+    Get-DHCPServerv4Scope –ComputerName LON-DC1 | Select-Object –Property ScopeId,SubnetMask,Name | fl
+    ```
+
+### Task 4: Display a Sorted List of Enabled Windows Firewall Rules
+1. Find the command related to firewall rules:
+    ```powershell
+    help *rule*
+    ```
+2. Display all firewall rules:
+    ```powershell
+    Get-NetFirewallRule
+    ```
+3. Display the help for `Get-NetFirewallRule`:
+    ```powershell
+    Help Get-NetFirewallRule –ShowWindow
+    ```
+4. Close the help window and list enabled firewall rules:
+    ```powershell
+    Get-NetFirewallRule –Enabled True
+    ```
+5. Format the list with wrapping:
+    ```powershell
+    Get-NetFirewallRule –Enabled True | Format-Table -wrap
+    ```
+6. Sort and group the list:
+    ```powershell
+    Get-NetFirewallRule –Enabled True | Select-Object –Property DisplayName,Profile,Direction,Action | Sort-Object –Property Profile, DisplayName | ft -GroupBy Profile
+    ```
+
+### Task 5: Display a Sorted List of Network Neighbors
+1. Find the command related to network neighbors:
+    ```powershell
+    help *neighbor*
+    ```
+2. Display the help for `Get-NetNeighbor`:
+    ```powershell
+    help Get-NetNeighbor –ShowWindow
+    ```
+3. Close the help window and list network neighbors:
+    ```powershell
+    Get-NetNeighbor
+    ```
+4. Sort network neighbors by state:
+    ```powershell
+    Get-NetNeighbor | Sort-Object –Property State
+    ```
+5. Format the list by state:
+    ```powershell
+    Get-NetNeighbor | Sort-Object –Property State | Select-Object –Property IPAddress,State | Format-Wide -GroupBy State -AutoSize
+    ```
+
+### Task 6: Display Information from the DNS Name Resolution Cache
+1. Test the network connection:
+    ```powershell
+    Test-NetConnection LON-DC1
+    ```
+2. Find the command related to DNS cache:
+    ```powershell
+    help *cache*
+    ```
+3. Display the DNS client cache:
+    ```powershell
+    Get-DnsClientCache
+    ```
+4. Format the DNS cache output:
+    ```powershell
+    Get-DnsClientCache | Select Name,Type,TimeToLive | Sort Name | Format-List
+    ```
+   *Note:* The `Type` field may show numerical values representing record types (e.g., 1= A, 5 = CNAME).
+
+### Exercise 1 Results
+After completing this exercise, you should have produced several custom reports containing management information from your environment.
+
+## Exercise 2: Filtering Objects
+
+### Task 1: Display a List of All the Users in the Users Container of Active Directory
+1. Find the command related to AD users:
+    ```powershell
+    help *user*
+    ```
+2. Display the help for `Get-ADUser`:
+    ```powershell
+    Get-Help Get-ADUser –ShowWindow
+    ```
+3. Close the help window and list all AD users:
+    ```powershell
+    Get-ADUser –Filter * | ft
+    ```
+4. List users in the "Users" container:
+    ```powershell
+    Get-ADUser –Filter * -SearchBase "cn=Users,dc=Adatum,dc=com" | ft
+    ```
+
+### Task 2: Create a Report Displaying Security Event Log Entries with Event ID 4624
+1. Count the entries with Event ID 4624:
+    ```powershell
+    Get-EventLog -LogName Security | Where EventID -eq 4624 | Measure-Object | fw
+    ```
+2. Display details of these entries:
+    ```powershell
+    Get-EventLog -LogName Security | Where EventID -eq 4624 | Select TimeWritten,EventID,Message
+    ```
+3. Display the last 10 entries:
+    ```powershell
+    Get-EventLog -LogName Security | Where EventID -eq 4624 | Select TimeWritten,EventID,Message -Last 10 | fl
+    ```
+
+### Task 3: Display a List of the Encryption Certificates Installed on the Computer
+1. List all certificates:
+    ```powershell
+    Get-ChildItem -Path CERT: -Recurse
+    ```
+2. Display certificate properties:
+    ```powershell
+    Get-ChildItem -Path CERT: -Recurse | Get-Member
+    ```
+3. List certificates without a private key:
+    ```powershell
+    Get-ChildItem -Path CERT: -Recurse | Where HasPrivateKey -eq $False | Select-Object -Property FriendlyName,Issuer | fl
+    ```
+4. List valid certificates without a private key:
+    ```powershell
+    Get-ChildItem -Path CERT: -Recurse | Where { $PSItem.HasPrivateKey -eq $False -and $PSItem.NotAfter -gt (Get-Date) -and $PSItem.NotBefore -lt (Get-Date) } | Select-Object -Property NotBefore,NotAfter, FriendlyName,Issuer | ft -wrap
+    ```
+
+### Task 4: Create a Report of the Disk Volumes Running Low on Space
+1. List volumes:
+    ```powershell
+    Get-Volume
+    ```
+2. Display volume properties:
+    ```powershell
+    Get-Volume | Get-Member
+    ```
+3. Find volumes with low space:
+    ```powershell
+    Get-Volume | Where-Object { $PSItem.SizeRemaining -gt 0 -and $PSItem.SizeRemaining / $PSItem.Size -lt .99 }| Select-Object DriveLetter, @{n='Size';e={'{0:N2}' -f ($PSItem.Size/1MB)}}
+    ```
+4. Display volumes with less than 10% free space:
+    ```powershell
+    Get-Volume | Where-Object { $PSItem.SizeRemaining -gt 0 -and $PSItem.SizeRemaining / $PSItem.Size -lt .1 }
+    ```
+
+### Task 5: Create a Report Displaying Specified Control Panel Items
+1. Find the command related to control panel items:
+    ```powershell
+    help *control*
+    ```
+2. List all control panel items:
+    ```powershell
+    Get-ControlPanelItem
+    ```
+3. Display items in the 'System and Security' category:
+    ```powershell
+    Get-ControlPanelItem –Category 'System and Security' | Sort Name
+    ```
+4. Filter and sort items:
+    ```powershell
+    Get-ControlPanelItem -Category 'System and Security' | Where-Object -FilterScript {-not ($PSItem.Category -notlike '*System and Security*')} | Sort Name
+    ```
+
+### Exercise 2 Results
+After completing this exercise, you should have used filtering to produce lists of management information that include only specified data and elements.
