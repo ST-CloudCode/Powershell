@@ -1,0 +1,109 @@
+# Managing Microsoft 365 with PowerShell
+# Replace File Destinations, Computers, and Users to applicable setting.
+## Exercise 1: Managing Users and Groups in Microsoft Entra ID
+
+### Task 1: Connect to Microsoft Entra ID
+
+Microsoft Graph PowerShell works with PowerShell 7 and later. It's also compatible with Windows PowerShell 5.1.
+
+**Prerequisites**:
+- Upgrade to PowerShell 5.1 or later
+- The PowerShell script execution policy must be set to remote signed or less restrictive.
+
+**Steps**:
+1. Open Windows PowerShell as an administrator:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+2. Install the Microsoft.Graph module:
+Install-Module Microsoft.Graph -Scope CurrentUser
+3. Verify the installation:
+Get-InstalledModule Microsoft.Graph
+4. Connect to Microsoft.Graph:
+Connect-MgGraph -Scopes "User.ReadWrite.All", "Application.ReadWrite.All", "Sites.ReadWrite.All", "Directory.ReadWrite.All", "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+5.List users:
+Get-MgUser
+
+### Task 2: Create a New Administrative User
+1. Retrieve verified domain:
+$verifiedDomain = (Get-MgOrganization).VerifiedDomains[0].Name
+2. Create a password profile:
+$PasswordProfile = @{  
+"Password"="<password>";  
+"ForceChangePasswordNextSignIn"=$true  
+}
+3. Create a new user:
+New-MgUser -DisplayName "Noreen Riggs" -UserPrincipalName "Noreen@$verifiedDomain" -AccountEnabled -PasswordProfile $PasswordProfile -MailNickName "Noreen"
+4. Assign Global Administrator role:
+$role = Get-MgDirectoryRole | Where {$_.displayName -eq 'Global Administrator'}
+$OdataId = "https://graph.microsoft.com/v1.0/directoryObjects/" + $user.id  
+New-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.id -OdataId $OdataId    
+
+### Task 3: Create and License a New User
+1. Create user:
+Copy code
+New-MgUser -DisplayName "Allan Yoo" -UserPrincipalName Allan@$verifiedDomain -AccountEnabled -PasswordProfile $PasswordProfile -MailNickName "Allan"
+2. Set location:
+Update-MgUser -UserId Allan@$verifiedDomain -UsageLocation US
+3. Review licenses:
+Get-MgSubscribedSku | FL
+4. Assign license:
+Set-MgUserLicense -UserId Allan@$verifiedDomain -AddLicenses @{SkuId = $SkuId} -RemoveLicenses @()
+
+### Task 4: Create and Populate a Group
+1. Create group:
+New-MgGroup -DisplayName "Sales Security Group" -MailEnabled:$False  -MailNickName "SalesSecurityGroup" -SecurityEnabled
+2. Add user to group:
+New-MgGroupMember -GroupId $group.id -DirectoryObjectId $user.id
+
+## Exercise 2: Managing Exchange Online
+### Task 1: Connect to Exchange Online
+1. Install module:
+Install-Module ExchangeOnlineManagement -force
+2. Connect:
+Connect-ExchangeOnline
+3. List mailboxes:
+Get-EXOMailbox
+
+### Task 2: Create a Room Mailbox
+1. Create room mailbox:
+New-Mailbox -Room -Name BoardRoom
+2. Configure room:
+Set-CalendarProcessing BoardRoom -AutomateProcessing AutoAccept
+
+### Task 3: Verify Room Resource Booking
+Sign in as Allan Yoo to Outlook.
+Create a new event and invite BoardRoom.
+
+## Exercise 3: Managing SharePoint Online
+
+### Task 1: Connect to SharePoint Online
+1. Install module:
+Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Scope CurrentUser
+2. Connect:
+Connect-SPOService -Url "https://$verifiedDomainShort-admin.sharepoint.com"
+3. List sites:
+Get-SPOSite
+
+###Task 2: Create a New Site
+1. Review templates:
+Get-SPOWebTemplate
+2. Create site:
+New-SPOSite -Url https://$verifiedDomainShort.sharepoint.com/sites/Sales -Owner noreen@$verifiedDomain -StorageQuota 256 -Template EHS#1 -NoWait
+
+##Exercise 4: Managing Microsoft Teams
+
+### Task 1: Connect to Microsoft Teams
+1. Install module:
+Install-Module -Name MicrosoftTeams -Force -AllowClobber
+2. Connect:
+Connect-MicrosoftTeams
+
+### Task 2: Create a New Team
+1. Create team:
+New-Team -DisplayName "Sales Team" -MailNickName "SalesTeam"
+2. Add user to team:
+Add-TeamUser -GroupId $team.GroupId -User Allan@$verifiedDomain -Role Member
+
+### Task 3: Verify Access to the Team
+1. Sign in as Allan Yoo to Microsoft Teams.
+2. Verify team presence and create a new conversation.
