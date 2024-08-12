@@ -1,0 +1,44 @@
+# Verify IPv4 Communication and Troubleshoot Connectivity
+# Replace Directories, Computers, Users, and addresses to applicable setting.
+
+## Task 1: Verify IPv4 Traffic 
+1. Test connectivity to default gateway
+Test-NetConnection -ComputerName 172.16.0.1
+
+2. Test connectivity to the Toronto server with TraceRoute
+Test-NetConnection -ComputerName TOR-SVR1.contoso.com -TraceRoute
+
+## Task 2: Troubleshoot IPv4 Connectivity
+1. Test connectivity to London DC
+Test-NetConnection -ComputerName LON-DC1
+
+2. Check IP address configuration
+Get-NetIPAddress
+
+3. Configure IP address if needed (uncomment and adjust if necessary)
+# New-NetIPAddress -InterfaceAlias "London_Network" -IPAddress 172.16.0.50 -PrefixLength 24
+
+4. Verify connectivity to the Toronto server
+Test-NetConnection -ComputerName TOR-SVR1
+
+5. Test connectivity to London DC
+Test-NetConnection -ComputerName LON-DC1
+
+6. Test connectivity to Toronto server
+Test-NetConnection -ComputerName TOR-SVR1
+
+7. Test default gateway
+Test-NetConnection -ComputerName 172.16.0.1
+
+8. Check the route to the Toronto server
+Test-NetConnection -ComputerName 172.16.18.20 -TraceRoute
+
+9. Verify IP configuration
+Get-NetIpConfiguration
+
+10. Fix incorrect default gateway if needed (uncomment and adjust if necessary)
+11. Remove-NetIPAddress -InterfaceAlias "London_Network" -IPAddress 172.16.0.51 -PrefixLength 24 -DefaultGateway 172.16.0.2 -Confirm:$false
+12. New-NetIPAddress -InterfaceAlias "London_Network" -IPAddress 172.16.0.51 -PrefixLength 24 -DefaultGateway 172.16.0.1 -Confirm:$false
+
+13. Verify connectivity again
+Test-NetConnection -ComputerName TOR-SVR1
