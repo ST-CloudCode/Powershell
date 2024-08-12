@@ -1,0 +1,59 @@
+##Steps to Implement Monitoring on Azure Using PowerShell
+1. Install the Azure PowerShell Module
+If you haven’t installed the Azure PowerShell module, run:
+Install-Module -Name Az -AllowClobber -Force
+2. Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+3. Select Your Subscription
+If you have multiple subscriptions, select the one you want to use:
+Set-AzContext -SubscriptionId <your-subscription-id>
+4. Create or Select a Resource Group
+Create a new resource group or use an existing one:
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+# Create a new resource group if needed
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+5. Create a Log Analytics Workspace
+Log Analytics Workspace is used to collect and analyze logs and metrics.
+$workspaceName = "myLogAnalyticsWorkspace"
+
+New-AzOperationalInsightsWorkspace -ResourceGroupName $resourceGroupName `
+                                    -Name $workspaceName `
+                                    -Location $location `
+                                    -Sku "PerGB2018"
+6. Enable Monitoring on a Virtual Machine
+If you want to enable monitoring on an existing virtual machine, you need to configure diagnostics settings:
+$vmName = "myVM"
+$vmResourceId = (Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName).Id
+
+# Set up monitoring for the VM
+Set-AzVMDiagnosticsExtension -ResourceGroupName $resourceGroupName `
+                             -VMName $vmName `
+                             -WorkspaceId (Get-AzOperationalInsightsWorkspace -ResourceGroupName $resourceGroupName -Name $workspaceName).CustomerId `
+                             -WorkspaceKey (Get-AzOperationalInsightsWorkspace -ResourceGroupName $resourceGroupName -Name $workspaceName).PrimarySharedKey
+7. Create a Metric Alert
+Create an alert rule to notify you based on specific metrics.
+$alertRuleName = "HighCpuUsageAlert"
+$alertCriteria = New-AzMetricAlertCriteria -MetricName "Percentage CPU" -Operator GreaterThan -Threshold 80 -TimeAggregation Average
+$actionGroupId = "<action-group-id>"  # Create or use an existing action group
+
+New-AzMetricAlertRule -ResourceGroupName $resourceGroupName `
+                       -Name $alertRuleName `
+                       -Location $location `
+                       -TargetResourceId $vmResourceId `
+                       -MetricAlertCriteria $alertCriteria `
+                       -ActionGroupId $actionGroupId
+8. Create a Log Alert
+Create an alert rule based on log queries.
+$logAlertRuleName = "FailedLoginAttemptsAlert"
+$query = "AzureDiagnostics | where Category == 'SignInLogs' | where ResultType == 'Failure'"
+$queryFrequency = "PT5M"  # Query every 5 minutes
+
+New-AzLogAlertRule -ResourceGroupName $resourceGroupName `
+                    -Name $logAlertRuleName `
+                    -Location $location `
+                    -Query $query `
+                    -Frequency $queryFrequency `
+                    -ActionGroupId $actionGroupId
