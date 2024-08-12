@@ -1,0 +1,82 @@
+## Exercise 3: Finding and Running PowerShell Commands
+
+### Task 1: Finding Commands
+
+**Resolve Commands:**
+```powershell
+Get-Help *resolve*
+Get-Command *resolve*
+Get-Command -Verb resolve
+Adapter Commands:
+
+**Adapter Commmands**
+Get-Help *adapter*
+Get-Command *adapter*
+Get-Command -Noun *adapter*
+Get-Command -Verb Set -Noun *adapter*
+Scheduled Tasks Commands:
+
+**Scheduled Task Commands**
+Get-Help *sched*
+Get-Command *sched*
+Get-Module *sched* -ListAvailable
+Block Commands:
+
+**Block Commands**
+Get-Command –Verb Block
+Get-Help *block*
+Cache Commands:
+
+**Cache Commands**
+Get-Help *cache*
+Get-Command *cache*
+Get-Command -Verb clear
+Firewall Commands:
+
+**Firewall Commands**
+Get-Help *firewall*
+Get-Command *firewall*
+Get-Help *rule*
+Get-Command *rule*
+Task 2: Running Commands
+List Enabled Firewall Rules:
+
+### Task 2: Running Commands
+
+**List Enabled Firewall Rules**
+Get-NetFirewallRule -Enabled True
+List Local IPv4 Addresses:
+
+**List Local IPv4 Addresses**
+Get-NetIPAddress –AddressFamily IPv4
+Set BITS Service Startup Type:
+
+**Set BITS Service Startup Type**
+Set-Service –Name BITS –StartupType Automatic
+Test Connection to a Server:
+
+**Test Connection Server**
+Test-Connection –ComputerName LON-DC1 –Quiet
+Display Latest Security Event Log Entries:
+
+**Display Latest Security Event Log Entries**
+Get-EventLog –LogName Security –Newest 10
+Exercise 4: Using About Files
+Task 1: Locating and Reviewing About Help Files
+Wildcard String Comparison:
+
+## Exercise 4: Using About Files
+
+## Task 1: Locating and Reviewing About Help Files
+
+**Wilcard String Comparison**
+Get-Help *comparison*
+Get-Help about_comparison_operators -ShowWindow
+Environment Variables:
+
+**Environment Variables**
+$env:computername
+
+**Code Signing**
+Get-Help *signing*
+Get-Help about_signing
