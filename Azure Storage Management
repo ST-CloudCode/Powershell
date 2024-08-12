@@ -1,0 +1,127 @@
+##Steps to Implement Azure Storage Management Using PowerShell
+###Task 1: Create and Configure a Storage Account
+Install the Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate to your Azure account:
+Connect-AzAccount
+Select Your Subscription
+Choose the subscription where you want to create the storage account:
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+Create a resource group where your storage account will reside:
+$resourceGroupName = "myStorageResourceGroup"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+Create a Storage Account
+Define and create the storage account:
+$storageAccountName = "mystorageacct123"
+$skuName = "Standard_LRS" # Locally redundant storage
+$kind = "StorageV2" # General-purpose v2
+
+New-AzStorageAccount -ResourceGroupName $resourceGroupName `
+                      -Name $storageAccountName `
+                      -Location $location `
+                      -SkuName $skuName `
+                      -Kind $kind `
+                      -AccessTier Hot
+### Task 2: Create and Configure Secure Blob Storage
+
+Create a blob container within the storage account:
+$storageAccount = Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName
+$context = $storageAccount.Context
+$containerName = "myblobcontainer"
+
+New-AzStorageContainer -Name $containerName -Context $context -PublicAccess Off
+Set Access Policies for the Blob Container
+
+Configure a shared access signature (SAS) token for secure access:
+$startTime = (Get-Date).ToUniversalTime()
+$expiryTime = $startTime.AddHours(1)
+
+$sasToken = New-AzStorageContainerSASToken -Name $containerName `
+                                            -Context $context `
+                                            -Permission rwl `
+                                            -StartTime $startTime `
+                                            -ExpiryTime $expiryTime
+
+Write-Output "SAS Token: $sasToken"
+
+### Task 3: Create and Configure Secure Azure File Storage
+Create a File Share in Azure File Storage
+Create a file share within the storage account:
+$fileShareName = "myfileshare"
+
+New-AzStorageShare -Name $fileShareName -Context $context
+Set Access Policies for the File Share
+
+Create a shared access signature (SAS) token for secure file share access:
+$startTime = (Get-Date).ToUniversalTime()
+$expiryTime = $startTime.AddHours(1)
+
+$sasTokenFile = New-AzStorageShareSASToken -Name $fileShareName `
+                                           -Context $context `
+                                           -Permission rwl `
+                                           -StartTime $startTime `
+                                           -ExpiryTime $expiryTime
+
+Write-Output "File Share SAS Token: $sasTokenFile"
+
+# Manage-AzureStorage.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myStorageResourceGroup"
+$location = "EastUS"
+$storageAccountName = "mystorageacct123"
+$skuName = "Standard_LRS"
+$kind = "StorageV2"
+$containerName = "myblobcontainer"
+$fileShareName = "myfileshare"
+
+# Create a Resource Group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Create a Storage Account
+New-AzStorageAccount -ResourceGroupName $resourceGroupName `
+                      -Name $storageAccountName `
+                      -Location $location `
+                      -SkuName $skuName `
+                      -Kind $kind `
+                      -AccessTier Hot
+
+# Create Blob Container
+$storageAccount = Get-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName
+$context = $storageAccount.Context
+New-AzStorageContainer -Name $containerName -Context $context -PublicAccess Off
+
+# Create SAS Token for Blob Container
+$startTime = (Get-Date).ToUniversalTime()
+$expiryTime = $startTime.AddHours(1)
+$sasToken = New-AzStorageContainerSASToken -Name $containerName `
+                                            -Context $context `
+                                            -Permission rwl `
+                                            -StartTime $startTime `
+                                            -ExpiryTime $expiryTime
+Write-Output "SAS Token: $sasToken"
+
+# Create File Share
+New-AzStorageShare -Name $fileShareName -Context $context
+
+# Create SAS Token for File Share
+$sasTokenFile = New-AzStorageShareSASToken -Name $fileShareName `
+                                           -Context $context `
+                                           -Permission rwl `
+                                           -StartTime $startTime `
+                                           -ExpiryTime $expiryTime
+Write-Output "File Share SAS Token: $sasTokenFile"
