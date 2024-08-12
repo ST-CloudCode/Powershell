@@ -1,0 +1,54 @@
+# Deploying Windows with Autopilot
+# Replace Directories, Computers, Group Names, and Users to applicable setting
+## Summary
+In this lab you will learn how to provision a Windows 11 device with Autopilot using User-driven mode.
+
+## Scenario
+Contoso IT is planning to roll out a deployment of new Windows 11 devices using Autopilot. The devices have a default installation of Windows 11. Users should be able to connect the device, turn it on, and answer minimal questions during the OOBE, using their Azure AD credentials to sign in. The process should automatically enroll and join the Azure AD domain. You have been asked to configure and test the experience.
+
+## Tasks
+
+### Task 1: Create Group in Azure AD
+1. Sign in to SEA-SVR1 as Contoso\Administrator with the password Pa55w.rd and close Server Manager.
+2. Open Microsoft Edge and navigate to [Entra](https://entra.microsoft.com).
+3. Sign in with admin@M365x11791029.onmicrosoft.com using the default tenant password.
+4. In the navigation pane, expand Identity, then select Groups and All groups.
+5. Select New group and configure the following:
+   - **Group type**: Security
+   - **Group name**: IT Devices
+   - **Group description**: IT Department Devices
+   - **Membership type**: Dynamic Device
+6. Select Add dynamic query and configure the following:
+   - **Rule syntax**: `(device.devicePhysicalIDs -any (_ -contains "[ZTDId]"))`
+7. Save the query and create the group.
+
+### Task 2: Generate a Device-Specific CSV File
+1. On SEA-WS3, sign in as Admin and open Windows Terminal (Admin).
+2. Run the following commands:
+   ```powershell
+   Install-Script -Name Get-WindowsAutoPilotInfo
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+   Get-WindowsAutoPilotInfo.ps1 -OutputFile C:\Computer.csv
+3. Review the CSV file with:
+cmd
+type C:\Computer.csv
+
+### Task 3: Work with a Windows Autopilot Deployment Profile
+1. In Microsoft Edge, navigate to Microsoft Intune and sign in.
+2. In the Microsoft Intune admin center, select Devices and Enrollment.
+3. On the Windows tab, select Windows Autopilot and import the CSV file:
+Import: Select C:\Computer.csv
+4. Create a new deployment profile:
+Name: Contoso profile1
+Deployment mode: User-Driven
+Join to Entra ID: Microsoft Entra joined
+Configure other options as specified in the task.
+5. Assign the profile to the IT Devices group.
+
+### Task 4: Reset the PC
+1. On SEA-WS3, select Start, type reset, and choose Reset this PC.
+2. Select Remove everything and Local reinstall, then proceed with the reset.
+
+### Task 5: Verify Autopilot Deployment
+1. Complete the OOBE process on SEA-WS3.
+2. Verify the device is connected to Contoso's Azure AD and check the device status in the Microsoft Entra admin center.
