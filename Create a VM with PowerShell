@@ -1,0 +1,66 @@
+# Create a VM with PowerShell
+# Replace file destinations, computers, and users to applicable setting.
+## Task 1: Configure the Cloud Shell
+
+1. Sign in to the [Azure portal](https://portal.azure.com). You can find your login credentials within the resources tab (directly next to this Instructions tab!).
+
+2. From the Azure portal, open the Azure Cloud Shell by clicking on the icon in the top right of the Azure Portal.
+
+3. When prompted to select either Bash or PowerShell, select PowerShell.
+
+4. On the "You have no storage mounted" screen, select **Show advanced settings** then fill in the information below:
+
+   | **Settings** | **Values** |
+   |--------------|------------|
+   | Resource Group | myRGPS |
+   | Storage account | cloudshell43100371 |
+   | File share | shellstorage |
+
+5. Select **Create Storage**.
+
+   Continue to Task 2.
+
+## Task 2: Create a Resource Group and Virtual Machine
+
+In this task, we will use PowerShell to create a resource group and a virtual machine.
+
+1. Ensure PowerShell is selected in the upper-left drop-down menu of the Cloud Shell pane.
+
+2. Verify your new resource group by running the following command in the PowerShell window:
+
+   ```powershell
+   Get-AzResourceGroup | Format-Table
+3. Create a virtual machine
+New-AzVm `
+-ResourceGroupName "myRGPS" `
+-Name "myVMPS" `
+-Location "East US" `
+-VirtualNetworkName "myVnetPS" `
+-SubnetName "mySubnetPS" `
+-SecurityGroupName "myNSGPS" `
+-PublicIpAddressName "myPublicIpPS" `
+-SecurityType "Standard"
+
+4. When prompted, provide the username and the password that will be configured as the local Administrator account on that virtual machine.
+
+5. Once the VM is created, close the PowerShell session Cloud Shell pane.
+
+6. In the Azure portal, search for Virtual machines and verify that myVMPS is running. This may take a few minutes.
+
+7. Access the new virtual machine and review the Overview and Networking settings to verify your information was correctly deployed.
+
+### Task 3: Execute Commands in the Cloud Shell
+
+1. Retrieve information about your virtual machine including name, resource group, location, and status. Notice the PowerState is running.
+Get-AzVM -name myVMPS -status | Format-Table -autosize
+2. Stop the virtual machine using the following command:
+Stop-AzVM -ResourceGroupName myRGPS -Name myVMPS
+3. When prompted, confirm (Yes) to the action. Wait for Succeeded status.
+4. Verify your virtual machine state. The PowerState should now be deallocated. You can also verify the virtual machine status in the portal. Close Cloud Shell.
+Get-AzVM -name myVMPS -status | Format-Table -autosize
+
+### Task 4: Review Azure Advisor Recommendations In this task, we will review Azure Advisor recommendations for our virtual machine.
+1. From the All services blade, search for and select Advisor.
+2. On the Advisor blade, select Overview. Notice recommendations are grouped by Reliability, Security, Performance, and Cost.
+3. Select All recommendations and take time to view each recommendation and suggested actions.
+## Depending on your resources, your recommendations will be different.
