@@ -1,0 +1,104 @@
+## Steps to Implement Azure Container Apps on Azure Using PowerShell
+### Task 1: Create and Configure an Azure Container App and Environment
+Install the Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+Login to Azure
+Authenticate with your Azure account:
+Connect-AzAccount
+
+Select Your Subscription
+Set the context to the subscription where you will deploy the Container App:
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+Define and create a resource group for your Container App:
+$resourceGroupName = "myContainerAppResourceGroup"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+Create an Azure Container App Environment
+The environment is a logical grouping for your Container Apps. Create it using the Azure CLI or Azure PowerShell:
+# Create a Container App Environment
+$containerAppEnvironmentName = "myContainerAppEnvironment"
+$appEnvironmentId = (New-AzContainerAppEnvironment -ResourceGroupName $resourceGroupName `
+                                                   -Name $containerAppEnvironmentName `
+                                                   -Location $location).Id
+Create an Azure Container App
+Define and deploy your Container App in the environment you created:
+# Variables
+$containerAppName = "myContainerApp"
+$containerImage = "mcr.microsoft.com/azuresamples/hello-world" # Sample container image
+$cpu = 0.5
+$memory = 1.0
+
+# Create the Container App
+New-AzContainerApp -ResourceGroupName $resourceGroupName `
+                    -Name $containerAppName `
+                    -EnvironmentId $appEnvironmentId `
+                    -Image $containerImage `
+                    -Cpu $cpu `
+                    -Memory $memory `
+                    -Location $location
+#### Task 2: Test and Verify Deployment of the Azure Container App
+Fetch the details of your deployed Container App to verify its configuration:
+$containerApp = Get-AzContainerApp -ResourceGroupName $resourceGroupName -Name $containerAppName
+$containerApp
+Check Container App Logs
+
+You can check the logs to ensure the Container App is running as expected:
+$containerAppLogs = Get-AzContainerAppLog -ResourceGroupName $resourceGroupName -Name $containerAppName
+$containerAppLogs
+Access the Container App
+
+Obtain the URL to access your Container App and test it:
+$appUrl = $containerApp.Endpoint
+Write-Output "Container App URL: $appUrl"
+
+# Deploy-AzureContainerApp.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myContainerAppResourceGroup"
+$location = "EastUS"
+$containerAppEnvironmentName = "myContainerAppEnvironment"
+$containerAppName = "myContainerApp"
+$containerImage = "mcr.microsoft.com/azuresamples/hello-world" # Sample container image
+$cpu = 0.5
+$memory = 1.0
+
+# Create a Resource Group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Create the Container App Environment
+$appEnvironmentId = (New-AzContainerAppEnvironment -ResourceGroupName $resourceGroupName `
+                                                   -Name $containerAppEnvironmentName `
+                                                   -Location $location).Id
+
+# Create the Container App
+New-AzContainerApp -ResourceGroupName $resourceGroupName `
+                    -Name $containerAppName `
+                    -EnvironmentId $appEnvironmentId `
+                    -Image $containerImage `
+                    -Cpu $cpu `
+                    -Memory $memory `
+                    -Location $location
+
+# Retrieve Container App Details
+$containerApp = Get-AzContainerApp -ResourceGroupName $resourceGroupName -Name $containerAppName
+Write-Output "Container App Details: $containerApp"
+
+# Check Container App Logs
+$containerAppLogs = Get-AzContainerAppLog -ResourceGroupName $resourceGroupName -Name $containerAppName
+Write-Output "Container App Logs: $containerAppLogs"
+
+# Access the Container App
+$appUrl = $containerApp.Endpoint
+Write-Output "Container App URL: $appUrl"
