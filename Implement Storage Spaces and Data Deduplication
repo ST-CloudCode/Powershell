@@ -1,0 +1,150 @@
+##Steps to Implement Storage Spaces and Data Deduplication on Azure Using PowerShell
+###Task 1: Implement Storage Spaces
+
+Install Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+
+Login to Azure
+Authenticate with your Azure account:
+Connect-AzAccount
+
+Create a Resource Group
+$resourceGroupName = "myStorageResourceGroup"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+Set up an Azure Storage account where you will store the data for Storage Spaces:
+$storageAccountName = "mystorageaccount"
+$skuName = "Standard_LRS"
+$kind = "StorageV2"
+
+New-AzStorageAccount -ResourceGroupName $resourceGroupName `
+                      -Name $storageAccountName `
+                      -Location $location `
+                      -SkuName $skuName `
+                      -Kind $kind
+
+Set up a virtual machine to use Storage Spaces:
+$vmName = "myVM"
+$adminUsername = "azureuser"
+$adminPassword = "Password1234!"
+$vnetName = "myVNet"
+$subnetName = "mySubnet"
+$nicName = "myNic"
+
+# Create a Virtual Network and Subnet
+$vnet = New-AzVirtualNetwork -ResourceGroupName $resourceGroupName `
+                             -Location $location `
+                             -Name $vnetName `
+                             -AddressPrefix "10.0.0.0/16"
+$subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetName `
+                                            -AddressPrefix "10.0.1.0/24" `
+                                            -VirtualNetwork $vnet
+$vnet | Set-AzVirtualNetwork
+
+# Create a Public IP Address
+$publicIpName = "myPublicIP"
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName `
+                      -Name $publicIpName `
+                      -Location $location `
+                      -AllocationMethod Static
+
+# Create a Network Interface
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+$nic = New-AzNetworkInterface -ResourceGroupName $resourceGroupName `
+                               -Location $location `
+                               -Name $nicName `
+                               -SubnetId $vnet.Subnets[0].Id `
+                               -PublicIpAddressId $publicIp.Id
+
+# Create a Virtual Machine
+New-AzVM -ResourceGroupName $resourceGroupName `
+          -Location $location `
+          -Name $vmName `
+          -VirtualNetworkId $vnet.Id `
+          -SubnetId $vnet.Subnets[0].Id `
+          -NetworkInterfaceId $nic.Id `
+          -ImageName "Win2019Datacenter" `
+          -Size "Standard_DS1_v2" `
+          -Credential (New-Object PSCredential ($adminUsername, (ConvertTo-SecureString $adminPassword -AsPlainText -Force)))
+
+Connect to the Virtual Machine
+Use RDP or another method to connect to the VM.
+Configure Storage Spaces on the VM
+
+Open PowerShell on the VM and run the following commands:
+# Initialize Disk
+$disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' }
+Initialize-Disk -Number $disk.Number -PartitionStyle MBR
+
+# Create a New Storage Pool
+New-StoragePool -FriendlyName "MyStoragePool" -StorageSubsystemFriendlyName "Storage Spaces" -PhysicalDisks $disk
+
+# Create a Virtual Disk
+New-VirtualDisk -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVirtualDisk" -Size 10TB -ResiliencySettingName "Parity"
+
+# Create a Volume
+New-Volume -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVolume" -FileSystem "NTFS" -Size 5TB
+
+### Task 2: Implement Data Deduplication
+
+Enable data deduplication on the volume you created:
+Enable-DedupVolume -Volume "E:"
+
+Configure Data Deduplication Settings
+Set up a schedule for data deduplication:
+Set-DedupSchedule -Name "DailySchedule" -Start "02:00" -Days Monday, Tuesday, Wednesday, Thursday, Friday -Duration 2:00:00
+Set additional options if needed:
+Set-DedupVolume -Volume "E:" -OptimizationEnabled $true
+
+# Setup-StorageSpacesAndDedup.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myStorageResourceGroup"
+$location = "EastUS"
+$storageAccountName = "mystorageaccount"
+$vmName = "myVM"
+$adminUsername = "azureuser"
+$adminPassword = "Password1234!"
+$vnetName = "myVNet"
+$subnetName = "mySubnet"
+$nicName = "myNic"
+$publicIpName = "myPublicIP"
+
+# Create Resource Group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Create Storage Account
+New-AzStorageAccount -ResourceGroupName $resourceGroupName -Name $storageAccountName -Location $location -SkuName "Standard_LRS" -Kind "StorageV2"
+
+# Create Virtual Network and Subnet
+$vnet = New-AzVirtualNetwork -ResourceGroupName $resourceGroupName -Location $location -Name $vnetName -AddressPrefix "10.0.0.0/16"
+$subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetName -AddressPrefix "10.0.1.0/24" -VirtualNetwork $vnet
+$vnet | Set-AzVirtualNetwork
+
+# Create Public IP Address
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName -Location $location -AllocationMethod Static
+
+# Create Network Interface
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+$nic = New-AzNetworkInterface -ResourceGroupName $resourceGroupName -Location $location -Name $nicName -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $publicIp.Id
+
+# Create Virtual Machine
+New-AzVM -ResourceGroupName $resourceGroupName -Location $location -Name $vmName -VirtualNetworkId $vnet.Id -SubnetId $vnet.Subnets[0].Id -NetworkInterfaceId $nic.Id -ImageName "Win2019Datacenter" -Size "Standard_DS1_v2" -Credential (New-Object PSCredential ($adminUsername, (ConvertTo-SecureString $adminPassword -AsPlainText -Force)))
+
+# Configure Storage Spaces
+$disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' }
+Initialize-Disk -Number $disk.Number -PartitionStyle MBR
+New-StoragePool -FriendlyName "MyStoragePool" -StorageSubsystemFriendlyName "Storage Spaces" -PhysicalDisks $disk
+New-VirtualDisk -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVirtualDisk" -Size 10TB -ResiliencySettingName "Parity"
+New-Volume -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVolume" -FileSystem "NTFS"
