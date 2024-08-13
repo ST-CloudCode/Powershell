@@ -1,0 +1,158 @@
+##Steps to Install, Upgrade, and Migrate Servers and Workloads on Azure Using PowerShell
+###Task 1: Install a New Azure Virtual Machine
+
+Install Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+
+Login to Azure
+Authenticate with your Azure account:
+Connect-AzAccount
+
+Create a Resource Group
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+Set up a virtual network and subnet for the VM:
+$vnetName = "myVNet"
+$subnetName = "mySubnet"
+
+$vnet = New-AzVirtualNetwork -ResourceGroupName $resourceGroupName `
+                             -Location $location `
+                             -Name $vnetName `
+                             -AddressPrefix "10.0.0.0/16"
+
+$subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetName `
+                                            -AddressPrefix "10.0.1.0/24" `
+                                            -VirtualNetwork $vnet
+
+$vnet | Set-AzVirtualNetwork
+Create a Public IP Address
+
+Assign a public IP address to your VM:
+$publicIpName = "myPublicIP"
+
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName `
+                      -Name $publicIpName `
+                      -Location $location `
+                      -AllocationMethod Static
+
+Create a network interface for the VM:
+$nicName = "myNic"
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+
+$nic = New-AzNetworkInterface -ResourceGroupName $resourceGroupName `
+                               -Location $location `
+                               -Name $nicName `
+                               -SubnetId $vnet.Subnets[0].Id `
+                               -PublicIpAddressId $publicIp.Id
+
+Deploy the VM:
+$vmName = "myVM"
+$adminUsername = "azureuser"
+$adminPassword = "Password1234!"
+
+New-AzVM -ResourceGroupName $resourceGroupName `
+          -Location $location `
+          -Name $vmName `
+          -VirtualNetworkId $vnet.Id `
+          -SubnetId $vnet.Subnets[0].Id `
+          -NetworkInterfaceId $nic.Id `
+          -ImageName "Win2019Datacenter" `
+          -Size "Standard_DS1_v2" `
+          -Credential (New-Object PSCredential ($adminUsername, (ConvertTo-SecureString $adminPassword -AsPlainText -Force)))
+### Task 2: Upgrade an Existing Azure Virtual Machine
+
+Retrieve the VM details:
+$vm = Get-AzVM -ResourceGroupName $resourceGroupName -Name $vmName
+
+Upgrade the VM size if needed:
+$newSize = "Standard_DS2_v2"
+
+$vm.HardwareProfile.VmSize = $newSize
+Update-AzVM -ResourceGroupName $resourceGroupName -VM $vm
+
+Apply OS Updates
+If the VM is running Windows, use PowerShell to apply OS updates:
+$session = New-PSSession -ComputerName $vmName -Credential (New-Object PSCredential ($adminUsername, (ConvertTo-SecureString $adminPassword -AsPlainText -Force)))
+Invoke-Command -Session $session -ScriptBlock { Install-WindowsUpdate -AcceptAll -AutoReboot }
+Remove-PSSession $session
+
+### Task 3: Migrate a Server to Azure
+
+Ensure your on-premises server is prepared for migration. Install the Azure Site Recovery agent on your server and configure it.
+
+Set up a Recovery Services vault to manage the migration:
+$vaultName = "myRecoveryVault"
+
+New-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName `
+                            -Name $vaultName `
+                            -Location $location
+
+Set up replication for the server:
+$vault = Get-AzRecoveryServicesVault -ResourceGroupName $resourceGroupName -Name $vaultName
+
+Set-AzRecoveryServicesVaultContext -Vault $vault
+$sourceServer = "<source-server>"
+$replicationPolicy = New-AzRecoveryServicesAsrPolicy -Name "DefaultPolicy" -RecoveryPointRetention "24 Hours" -ApplicationConsistentSnapshotFrequency "60 minutes"
+
+$replicationItem = New-AzRecoveryServicesAsrReplicationProtectedItem -ResourceGroupName $resourceGroupName `
+                                                                    -VaultName $vaultName `
+                                                                    -PolicyId $replicationPolicy.Id `
+                                                                    -SourceServerId $sourceServer
+
+Start the Migration
+Start-AzRecoveryServicesAsrReplicationProtectedItemFailover -ResourceGroupName $resourceGroupName `
+                                                           -VaultName $vaultName `
+                                                           -ProtectedItemId $replicationItem.Id
+
+### Task 4: Validate and Test the Migration
+
+Validate the Migration
+$status = Get-AzRecoveryServicesAsrReplicationProtectedItem -ResourceGroupName $resourceGroupName `
+                                                            -VaultName $vaultName `
+                                                            -ProtectedItemId $replicationItem.Id
+
+$status | Format-Table
+Test the Migration by performing a test failover to ensure everything is working correctly:
+Start-AzRecoveryServicesAsrReplicationProtectedItemTestFailover -ResourceGroupName $resourceGroupName `
+                                                                -VaultName $vaultName `
+                                                                -ProtectedItemId $replicationItem.
+
+# Install-Upgrade-Migrate.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$vnetName = "myVNet"
+$subnetName = "mySubnet"
+$publicIpName = "myPublicIP"
+$nicName = "myNic"
+$vmName = "myVM"
+$adminUsername = "azureuser"
+$adminPassword = "Password1234!"
+$newSize = "Standard_DS2_v2"
+$vaultName = "myRecoveryVault"
+$sourceServer = "<source-server>"
+
+# Install a New Virtual Machine
+$vnet = New-AzVirtualNetwork -ResourceGroupName $resourceGroupName -Location $location -Name $vnetName -AddressPrefix "10.0.0.0/16"
+$subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetName -AddressPrefix "10.0.1.0/24" -VirtualNetwork $vnet
+$vnet | Set-AzVirtualNetwork
+
+New-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName -Location $location -AllocationMethod Static
+
+$publicIp = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name $publicIpName
+$nic = New-AzNetworkInterface -ResourceGroupName $resourceGroupName -Location $location -Name $nicName -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $publicIp.Id
+
+New-AzVM -ResourceGroupName $resourceGroupName -Location $location
