@@ -147,4 +147,9 @@ $disk = Get-Disk | Where-Object { $_.PartitionStyle -eq 'RAW' }
 Initialize-Disk -Number $disk.Number -PartitionStyle MBR
 New-StoragePool -FriendlyName "MyStoragePool" -StorageSubsystemFriendlyName "Storage Spaces" -PhysicalDisks $disk
 New-VirtualDisk -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVirtualDisk" -Size 10TB -ResiliencySettingName "Parity"
-New-Volume -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVolume" -FileSystem "NTFS"
+New-Volume -StoragePoolFriendlyName "MyStoragePool" -FriendlyName "MyVolume" -FileSystem "NTFS" -Size 5TB
+
+# Enable Data Deduplication
+Enable-DedupVolume -Volume "E:"
+Set-DedupSchedule -Name "DailySchedule" -Start "02:00" -Days Monday, Tuesday, Wednesday, Thursday, Friday -Duration 2:00:00
+Set-DedupVolume -Volume "E:" -OptimizationEnabled $true
