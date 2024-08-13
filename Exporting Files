@@ -1,0 +1,57 @@
+# Define paths and filenames
+$folderPath = "C:\Windows\System32\spool\PRINTERS\RunningServicesReport"
+$htmlFilePath = Join-Path -Path $folderPath -ChildPath "services_report.html"
+$jsonFilePath = Join-Path -Path $folderPath -ChildPath "services_report.json"
+$spoolerFolderPath = "C:\Windows\System32\Spool\Printers"
+
+# Create the folder if it does not exist
+if (-not (Test-Path $folderPath)) {
+    New-Item -Path $folderPath -ItemType Directory -Force
+}
+
+# Get all services that are currently running
+$runningServices = Get-Service | Where-Object { $_.Status -eq 'Running' }
+
+# Retrieve detailed information for each running service
+$serviceDetails = $runningServices | ForEach-Object {
+    $service = Get-WmiObject -Class Win32_Service -Filter "Name='$($_.Name)'"
+    [PSCustomObject]@{
+        Name          = $service.Name
+        Status        = $service.State
+        'Startup Type' = $service.StartMode
+        'File Location' = $service.PathName
+    }
+}
+
+# Export the details to an HTML file
+$serviceDetails | ConvertTo-Html -Property Name, Status, 'Startup Type', 'File Location' -Title "Running Services Report" | Out-File -FilePath $htmlFilePath
+
+# Export the details to a JSON file
+$serviceDetails | ConvertTo-Json | Out-File -FilePath $jsonFilePath
+
+# Check if each file exists and output appropriate messages
+foreach ($fileName in $fileNames) {
+    $filePath = Join-Path -Path $folderPath -ChildPath $fileName
+    
+    if (Test-Path $filePath) {
+        Write-Host "Success: The file '$fileName' was found at '$filePath'." -ForegroundColor Green
+    } else {
+        Write-Host "Error: The file '$fileName' was not found in '$folderPath'." -ForegroundColor Red
+    }
+}
+
+# Define the threshold for file age (6 hours)
+$threshold = (Get-Date).AddHours(-6)
+
+# Get a list of files older than 6 hours in the printer spooler folder
+$oldFiles = Get-ChildItem -Path $spoolerFolderPath | Where-Object { $_.LastWriteTime -lt $threshold }
+
+# Check if there are any old files
+if ($oldFiles.Count -gt 0) {
+    # Restart the Print Spooler service
+    Write-Output "Old files found in the printer spooler folder. Restarting the Print Spooler service..."
+    Restart-Service -Name Spooler
+    Write-Output "Print Spooler service has been restarted."
+} else {
+    Write-Output "No files older than 6 hours found in the printer spooler folder."
+}
