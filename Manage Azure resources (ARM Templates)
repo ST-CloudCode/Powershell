@@ -1,0 +1,200 @@
+##Steps to Implement Management of Azure Resources Using Azure Resource Manager Templates
+###Task 1: Create an Azure Resource Manager Template
+
+Create a Resource Group
+Install-Module -Name Az -AllowClobber -Force
+Connect-AzAccount
+Set-AzContext -SubscriptionId <your-subscription-id>
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+Create a basic ARM template (azuredeploy.json) to define a simple Azure resource, such as a virtual machine:
+
+{
+  "$schema": "https://schema.management.azure.com/2021-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2021-07-01",
+      "name": "myVM",
+      "location": "EastUS",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_DS1_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "osProfile": {
+          "computerName": "myVM",
+          "adminUsername": "azureuser",
+          "adminPassword": "Password1234!"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/<your-subscription-id>/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkInterfaces/myNIC"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+###Task 2: Edit an Azure Resource Manager Template and Redeploy
+Modify the ARM template to update the configuration, such as changing the VM size or adding tags. For example:
+
+{
+  "$schema": "https://schema.management.azure.com/2021-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2021-07-01",
+      "name": "myVM",
+      "location": "EastUS",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_DS2_v2"  // Updated VM size
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "osProfile": {
+          "computerName": "myVM",
+          "adminUsername": "azureuser",
+          "adminPassword": "Password1234!"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "/subscriptions/<your-subscription-id>/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkInterfaces/myNIC"
+            }
+          ]
+        },
+        "tags": {
+          "Environment": "Production"  // Added tags
+        }
+      }
+    }
+  ]
+}
+
+Deploy the updated template using PowerShell:
+$templateFile = "path\to\azuredeploy.json"
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile
+
+###Task 3: Configure Cloud Shell and Deploy a Template with Azure PowerShell
+
+Configure Azure Cloud Shell
+Open Azure Cloud Shell in the Azure portal. You can use Bash or PowerShell in Cloud Shell.
+Deploy the ARM Template Using Azure PowerShell in Cloud Shell
+
+Upload your ARM template to Cloud Shell and deploy it:
+$templateFile = "azuredeploy.json"
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName `
+                               -TemplateFile $templateFile
+
+### Task 4: Deploy a Template with the Azure CLI
+
+Install Azure CLI
+Deploy the ARM Template Using Azure CLI
+Use the Azure CLI to deploy the template:
+sh
+az login
+az group create --name $resourceGroupName --location $location
+az deployment group create --resource-group $resourceGroupName --template-file azuredeploy.json
+
+### Task 5: Deploy a Resource Using Azure Bicep
+
+Install Azure Bicep
+sh
+az bicep install
+
+Create a Bicep file (main.bicep) equivalent to your ARM template:
+
+resource myVM 'Microsoft.Compute/virtualMachines@2021-07-01' = {
+  name: 'myVM'
+  location: 'EastUS'
+  properties: {
+    hardwareProfile: {
+      vmSize: 'Standard_DS2_v2'
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2019-Datacenter'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+      }
+    }
+    osProfile: {
+      computerName: 'myVM'
+      adminUsername: 'azureuser'
+      adminPassword: 'Password1234!'
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: '/subscriptions/<your-subscription-id>/resourceGroups/myResourceGroup/providers/Microsoft.Network/networkInterfaces/myNIC'
+        }
+      ]
+    }
+    tags: {
+      Environment: 'Production'
+    }
+  }
+}
+
+Deploy the Bicep file using Azure CLI:
+sh
+az deployment group create --resource-group $resourceGroupName --template-file main.bicep
+
+# Deploy-ARM-Templates.ps1
+
+# Install Azure PowerShell module
+Install-Module -Name Az -AllowClobber -Force
+
+# Connect to Azure
+Connect-AzAccount
+
+# Set Azure subscription context
+Set-AzContext -SubscriptionId <your-subscription-id>
+
+# Variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+$templateFile = "templates/azuredeploy.json"
+
+# Create a Resource Group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# Deploy the ARM Template
+New-AzResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateFile $templateFile
+
+# Bicep deployment
+$bicepFile = "templates/main.bicep"
+az deployment group create --resource-group $resourceGroupName --template-file $bicepFile
