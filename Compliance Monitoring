@@ -1,0 +1,80 @@
+# Compliance Monitoring on Azure Using PowerShell
+
+## Steps to Implement Compliance Monitoring
+
+```powershell
+# 1. Install Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+
+# 2. Connect to Your Azure Account
+Connect-AzAccount
+
+# 3. Configure Azure Policy
+# Define policy definition
+$policyDefinition = @{
+    DisplayName = "Enforce Tagging on Resources"
+    PolicyType   = "Custom"
+    Mode         = "All"
+    PolicyRule   = @{
+        if = @{
+            field = "tags"
+            exists = "false"
+        }
+        then = @{
+            effect = "deny"
+        }
+    }
+}
+
+$policy = New-AzPolicyDefinition -Name "EnforceTagging" -DisplayName "Enforce Tagging on Resources" -Policy $policyDefinition -Mode All
+
+# Assign policy to a scope (e.g., subscription or resource group)
+$scope = "/subscriptions/{subscription-id}"
+New-AzPolicyAssignment -Name "EnforceTaggingAssignment" -PolicyDefinition $policy.Id -Scope $scope
+
+# 4. Configure Azure Security Center
+# Enable Azure Security Center Standard Tier
+Set-AzSecurityPricing -PricingTier "Standard"
+
+# Optional: Configure Security Center policies
+Set-AzSecurityContact -Email "your-email@example.com" -Phone "123-456-7890"
+
+# 5. Set Up Azure Monitor
+# Create a Log Analytics workspace
+$resourceGroup = "YourResourceGroup"
+$workspaceName = "YourWorkspaceName"
+New-AzOperationalInsightsWorkspace -ResourceGroupName $resourceGroup -Name $workspaceName -Location "East US" -Sku "PerGB2018"
+
+# Link the workspace to Azure Security Center
+Set-AzSecurityContact -Email "your-email@example.com" -Phone "123-456-7890" -AlertNotifications "Email"
+
+# 6. Set Up Alerts for Non-Compliance
+# Create an action group for notifications
+$actionGroupName = "YourActionGroupName"
+$actionGroupEmail = "your-email@example.com"
+New-AzActionGroup -ResourceGroupName $resourceGroup -Name $actionGroupName -ShortName "AG" -EmailReceiver -EmailAddress $actionGroupEmail
+
+# Create an alert rule for policy compliance
+$alertRuleName = "ComplianceAlert"
+$alertRule = @{
+    Name              = $alertRuleName
+    Description       = "Alert when compliance policy is violated"
+    ResourceGroupName = $resourceGroup
+    Location          = "East US"
+    Condition         = "PolicyCompliance == 'NonCompliant'"
+    ActionGroup       = $actionGroupName
+}
+
+New-AzMetricAlertRule -Name $alertRuleName -ResourceGroupName $resourceGroup -TargetResourceId "/subscriptions/{subscription-id}" -Condition "Total > 0" -Description "Alert when compliance policy is violated" -ActionGroupId $actionGroupName
+
+# 7. Review Compliance Status
+# Get compliance state
+$policyAssignments = Get-AzPolicyAssignment
+foreach ($assignment in $policyAssignments) {
+    $complianceState = Get-AzPolicyState -PolicyAssignmentId $assignment.Id
+    Write-Output "Policy: $($assignment.DisplayName)"
+    Write-Output "Compliance State: $($complianceState.ComplianceState)"
+}
+
+# 8. Document and Share Configuration
+# Document and share configuration details as needed.
