@@ -1,0 +1,63 @@
+# Create Docker Containers on Azure Using PowerShell
+
+## Steps to Implement
+
+```powershell
+# 1. Install Azure PowerShell Module
+Install-Module -Name Az -AllowClobber -Force
+
+# 2. Connect to Your Azure Account
+Connect-AzAccount
+
+# 3. Create a Resource Group
+# Define variables
+$resourceGroupName = "myResourceGroup"
+$location = "EastUS"
+
+# Create resource group
+New-AzResourceGroup -Name $resourceGroupName -Location $location
+
+# 4. Create an Azure Container Instance
+# Define container instance variables
+$containerGroupName = "myContainerGroup"
+$containerName = "myContainer"
+$containerImage = "mcr.microsoft.com/dotnet/aspnet:5.0" # Example image
+$cpu = 1
+$memory = 1.5
+$port = 80
+
+# Create the container instance
+New-AzContainerGroup `
+    -ResourceGroupName $resourceGroupName `
+    -Name $containerGroupName `
+    -Location $location `
+    -OsType Linux `
+    -Cpu $cpu `
+    -Memory $memory `
+    -Container `
+        @{
+            Name = $containerName
+            Image = $containerImage
+            Ports = @($port)
+        } `
+    -RestartPolicy Always
+
+# 5. Verify the Container Instance
+# Get container instance details
+$containerGroup = Get-AzContainerGroup -ResourceGroupName $resourceGroupName -Name $containerGroupName
+
+# Display container instance details
+$containerGroup | Format-List
+
+# 6. Update or Delete Container Instances (Optional)
+# Update Container Instance
+# Update container instance (example: change CPU and memory)
+Update-AzContainerGroup `
+    -ResourceGroupName $resourceGroupName `
+    -Name $containerGroupName `
+    -Cpu 2 `
+    -Memory 4
+
+# Delete Container Instance
+# Delete container instance
+Remove-AzContainerGroup -ResourceGroupName $resourceGroupName -Name $containerGroupName -Force
